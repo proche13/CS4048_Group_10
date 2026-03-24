@@ -1,3 +1,30 @@
 <resources>
-    <string name="app_name">ZeroVelocity</string>
+    <string name="app_name">Most Polluted</string>
+
+    <!-- Login screen -->
+    <string name="login_subtitle">Sign in to track your habits</string>
+    <string name="hint_email">Email address</string>
+    <string name="hint_password">Password</string>
+    <string name="btn_login">Log In</string>
+    <string name="btn_google_sign_in">Continue with Google</string>
+    <string name="label_or">— or —</string>
+    <string name="label_go_to_sign_up">Don\'t have an account? Sign up</string>
+
+    <!-- Sign up screen -->
+    <string name="sign_up_title">Create Account</string>
+    <string name="sign_up_subtitle">Join Most Polluted today</string>
+    <string name="hint_display_name">Display name</string>
+    <string name="hint_confirm_password">Confirm password</string>
+    <string name="btn_sign_up">Sign Up</string>
+    <string name="label_go_to_login">Already have an account? Log in</string>
+
+    <!-- Validation errors -->
+    <string name="error_email_required">Email is required</string>
+    <string name="error_password_required">Password is required</string>
+    <string name="error_display_name_required">Display name is required</string>
+    <string name="error_password_too_short">Password must be at least 6 characters</string>
+    <string name="error_passwords_do_not_match">Passwords do not match</string>
+    <string name="error_login_failed">Login failed. Please try again.</string>
+    <string name="error_sign_up_failed">Sign up failed. Please try again.</string>
+    <string name="error_profile_save_failed">Account created but profile save failed.</string>
 </resources>
