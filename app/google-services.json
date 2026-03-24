@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1017925712281",
+    "project_id": "mostpolluted",
+    "storage_bucket": "mostpolluted.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1017925712281:android:a772f0956fa33bc068bb08",
+        "android_client_info": {
+          "package_name": "com.example.zerovelocity"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBvgNKUFTprpY4rFubuC8gqpH_WEY5WooM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
