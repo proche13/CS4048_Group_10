@@ -1,8 +1,8 @@
 package com.example.zerovelocity;
-
+/*
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
-
+*/
 public class LogRepo {
     private static LogRepo instance;
 
