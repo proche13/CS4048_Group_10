@@ -12,10 +12,14 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.UserProfileChangeRequest;
-import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
 
 import java.util.HashMap;
 import java.util.Map;
+
+import android.util.Log;
+import com.google.firebase.auth.FirebaseUser;
 
 public class SignUpActivity extends AppCompatActivity {
 
@@ -24,15 +28,17 @@ public class SignUpActivity extends AppCompatActivity {
     private TextView tvGoToLogin;
 
     private FirebaseAuth mAuth;
-    private FirebaseFirestore db;
+    private DatabaseReference dbRef;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_sign_up);
 
+        // Initialise Firebase Auth and Realtime Database
         mAuth = FirebaseAuth.getInstance();
-        db    = FirebaseFirestore.getInstance();
+        FirebaseDatabase database = FirebaseDatabase.getInstance("https://mostpolluted-default-rtdb.europe-west1.firebasedatabase.app/");
+        dbRef = database.getReference("users");
 
         etDisplayName     = findViewById(R.id.et_display_name);
         etEmail           = findViewById(R.id.et_email);
@@ -45,7 +51,8 @@ public class SignUpActivity extends AppCompatActivity {
 
         tvGoToLogin.setOnClickListener(v -> finish());
     }
-    //method called when sign up button is pressed
+
+    // method called when sign up button is pressed
     private void attemptSignUp() {
         String displayName     = etDisplayName.getText().toString().trim();
         String email           = etEmail.getText().toString().trim();
@@ -80,32 +87,34 @@ public class SignUpActivity extends AppCompatActivity {
                                 .setDisplayName(displayName)
                                 .build();
                         mAuth.getCurrentUser().updateProfile(profileUpdate)
-                                .addOnCompleteListener(p -> saveUserToFirestore(displayName, email));
+                                .addOnCompleteListener(p -> saveUserToDatabase(displayName, email));
                     } else {
                         Toast.makeText(this, "Sign up failed: " +
                                 task.getException().getMessage(), Toast.LENGTH_LONG).show();
                     }
                 });
     }
-    //method called to save user data to the Firebase db
-    private void saveUserToFirestore(String displayName, String email) {
+
+    // method called to save user data to the Firebase Realtime Database
+    private void saveUserToDatabase(String displayName, String email) {
         String uid = mAuth.getCurrentUser().getUid();
 
         Map<String, Object> user = new HashMap<>();
-        user.put("uid",         uid);
+        user.put("uid", uid);
         user.put("displayName", displayName);
-        user.put("email",       email);
-        user.put("photoUrl",    "");
-        user.put("createdAt",   System.currentTimeMillis());
+        user.put("email", email);
+        user.put("createdAt", System.currentTimeMillis());
 
-        db.collection("users").document(uid).set(user)
-                .addOnSuccessListener(a -> navigateToMain())
+        dbRef.child(uid).setValue(user)
+                .addOnSuccessListener(aVoid -> navigateToMain())
                 .addOnFailureListener(e -> {
-                    Toast.makeText(this, "Profile save failed, continuing anyway", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "Profile save failed: " + e.getMessage(),
+                            Toast.LENGTH_LONG).show();
                     navigateToMain();
                 });
     }
-    //method used to navigate to MainActivity View
+
+    // method used to navigate to MainActivity after successful sign up
     private void navigateToMain() {
         Intent intent = new Intent(SignUpActivity.this, MainActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
