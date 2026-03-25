@@ -2,47 +2,62 @@ package com.example.zerovelocity;
 
 public class LogEntry {
 
-    public enum Type {
-        CIGARETTE("Cigarette"),
-        VAPE("Vape"),
-        DRINK("Drink");
-
-        private final String label;
-
-        Type(String label) {
-            this.label = label;
-        }
-
-        public String getLabel() {
-            return label;
-        }
+    public enum Category {
+        Drink,
+        Cigarette,
+        Vape
     }
+    private final String eventId;
+    private final String userID;
+    private final String username;
 
-    private final long id;
-    private final Type type;
-    private final int quantity;
+    private final Category category;
+    private final String type;
+
+    private final String name;
+    private final float units;
     private final long timestampMillis;
 
-    public LogEntry(Type type, int quantity, long timestampMillis){
-        this.id = System.nanoTime();
+    public LogEntry(String eventId, String userID, String username, Category category, float units, long timestampMillis, String type, String name){
+        this.eventId = eventId;
+        this.userID = userID;
+        this.username = username;
+        this.category = category;
         this.type = type;
-        this.quantity = quantity;
+        this.name = name;
+        this.units = units;
         this.timestampMillis = timestampMillis;
     }
 
-    public long getId(){
-        return id;
+    public String getEventId(){
+        return eventId;
     }
 
-    public Type getType(){
+    public String getUserID(){
+        return userID;
+    }
+
+    public String getUsername(){
+        return username;
+    }
+
+    public String getType(){
         return type;
     }
 
-    public int getQuantity(){
-        return quantity;
+    public String getName(){
+        return name;
     }
 
-    public long getTimestampMillis(){
+    public Category getCategory(){
+        return category;
+    }
+
+    public float getUnits() {
+        return units;
+    }
+
+    public long getTimestampMillis() {
         return timestampMillis;
     }
 }
