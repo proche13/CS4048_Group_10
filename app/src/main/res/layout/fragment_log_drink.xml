@@ -17,4 +17,21 @@
         android:layout_height="wrap_content"
         android:text="Coming Soon" />
 
+    <Spinner
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:id = "@+id/spinnerCategory">
+    </Spinner>
+
+    <EditText
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:id = "@+id/editTextUnits">
+    </EditText>
+
+    <Button
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:id = "@+id/buttonLog">
+    </Button>
 </LinearLayout>
