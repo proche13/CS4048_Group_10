@@ -1,9 +1,7 @@
 package com.example.zerovelocity;
 
-import com.google.firebase.firestore.DocumentReference;
-import com.google.firebase.firestore.FieldValue;
-import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.WriteBatch;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
 
 public class LogRepo {
     private static LogRepo instance;
@@ -17,9 +15,9 @@ public class LogRepo {
         }
         return instance;
     }
-
+/*
   public void logEvent(String eventId, String userID, String username, String type, String name, float units){
         FirebaseFirestore db = FirebaseFirestore.getInstance();
         WriteBatch batch = db.batch();
-  }
+  }*/
 }
