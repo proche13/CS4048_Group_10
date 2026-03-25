@@ -7,6 +7,24 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
+    <Spinner
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+
+        android:id = "@+id/spinnerType"/>
+
+    <Button
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+
+        android:id = "@+id/buttonSubmit"/>
+
+    <EditText
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+
+        android:id="@+id/editQuantity" />
+
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
