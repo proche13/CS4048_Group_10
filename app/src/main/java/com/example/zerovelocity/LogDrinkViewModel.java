@@ -17,6 +17,6 @@ public class LogDrinkViewModel extends ViewModel {
         String userID = currentUser.getUid();
         String username = currentUser.getDisplayName() != null ? currentUser.getDisplayName() : "Unknown";
 
-        repo.logEvent(userID, username, category, name, type, units);
+        repo.logEvent(userID, username, name, type, units, category);
     }
 }
