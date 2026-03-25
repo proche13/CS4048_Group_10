@@ -10,28 +10,45 @@
         android:layout_height="wrap_content"
         android:text="Log Drink"
         android:textSize="20sp"
+        android:textStyle="bold"
         android:layout_marginBottom="8dp" />
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Coming Soon" />
+        android:text="Category"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="24dp" />
 
     <Spinner
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:id = "@+id/spinnerCategory">
+        android:layout_height="wrap_content"
+        android:id = "@+id/spinnerCategory"
+        android:layout_marginBottom="16dp">
     </Spinner>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Units"
+        android:textSize="14sp"
+        android:layout_marginBottom="4dp">
+    </TextView>
 
     <EditText
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Enter units"
+        android:inputType="numberDecimal"
+        android:layout_marginBottom="24dp"
         android:id = "@+id/editTextUnits">
     </EditText>
 
     <Button
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Log"
         android:id = "@+id/buttonLog">
     </Button>
 </LinearLayout>
