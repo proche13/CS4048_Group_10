@@ -10,11 +10,62 @@
         android:layout_height="wrap_content"
         android:text="Friends"
         android:textSize="20sp"
-        android:layout_marginBottom="8dp" />
+        android:layout_marginBottom="12dp" />
+
+    <!-- Search row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <EditText
+            android:id="@+id/et_search"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="Search by name"
+            android:inputType="text"
+            android:imeOptions="actionSearch"
+            android:layout_marginEnd="8dp" />
+
+        <Button
+            android:id="@+id/btn_search"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Search" />
+
+    </LinearLayout>
 
     <TextView
+        android:id="@+id/tv_search_header"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Coming Soon" />
+        android:text="Search Results"
+        android:textSize="14sp"
+        android:layout_marginTop="12dp"
+        android:layout_marginBottom="4dp"
+        android:visibility="gone" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rv_search_results"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:nestedScrollingEnabled="false" />
+
+    <TextView
+        android:id="@+id/tv_friends_header"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="My Friends"
+        android:textSize="14sp"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="4dp"
+        android:visibility="gone" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rv_friends"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:nestedScrollingEnabled="false" />
 
 </LinearLayout>

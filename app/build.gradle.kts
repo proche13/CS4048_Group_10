@@ -53,4 +53,5 @@ dependencies {
     implementation("com.google.firebase:firebase-database")
     implementation("com.google.firebase:firebase-storage")
     implementation("com.google.firebase:firebase-messaging")
+    implementation("androidx.recyclerview:recyclerview:1.3.2")
 }
