@@ -103,6 +103,9 @@ public class SignUpActivity extends AppCompatActivity {
         user.put("uid", uid);
         user.put("displayName", displayName);
         user.put("email", email);
+        user.put("totalDrinks", 0);
+        user.put("totalVapes", 0);
+        user.put("totalCigarettes", 0);
         user.put("createdAt", System.currentTimeMillis());
 
         dbRef.child(uid).setValue(user)
