@@ -8,6 +8,7 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Spinner;
+import android.widget.Toast;
 
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
@@ -49,9 +50,20 @@ public class LogDrinkFragment extends Fragment {
             return;
         }
 
-        float units = Float.parseFloat(unitsText);
+        float units;
+
+        try{
+            units = Float.parseFloat(unitsText);
+        }catch (NumberFormatException e){
+            unitsEditText.setError("Invalid units. Please enter a valid number");
+            return;
+        }
+
         LogEntry.Category category = (LogEntry.Category) categorySpinner.getSelectedItem();
 
         viewModel.logEvent(category, "default", "default", units);
+
+        Toast.makeText(requireContext(), "Logged", Toast.LENGTH_SHORT).show();
+        unitsEditText.setText("");
     }
 }
