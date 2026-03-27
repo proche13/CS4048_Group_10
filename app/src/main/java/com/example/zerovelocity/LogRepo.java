@@ -62,7 +62,7 @@ public class LogRepo {
                 usersRef.child(userID).child("totalDrinks").setValue(ServerValue.increment(units));
                 break;
             case Vape:
-                usersRef.child(userID).child("totalVape").setValue(ServerValue.increment(units));
+                usersRef.child(userID).child("totalVapes").setValue(ServerValue.increment(units));
                 break;
             case Cigarette:
                 usersRef.child(userID).child("totalCigarettes").setValue(ServerValue.increment(units));
