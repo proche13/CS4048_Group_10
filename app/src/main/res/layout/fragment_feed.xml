@@ -13,8 +13,17 @@
         android:layout_marginBottom="8dp" />
 
     <TextView
+        android:id="@+id/tv_leader"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Coming Soon" />
+        android:text="Top user: Loading..."
+        android:textSize="16sp"
+        android:layout_marginBottom="12dp"/>
+
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rv_feed"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"/>
 
 </LinearLayout>
