@@ -48,24 +48,24 @@ public class LogRepo {
         dbRef.child(eventId).setValue(entry)
                 .addOnSuccessListener(a -> {
                         android.util.Log.d("LogRepo", "Event logged successfully");
-        incrementUserCounter(userID, category);
+        incrementUserCounter(userID, category, units);
     })
                 .addOnFailureListener(e ->
                         android.util.Log.e("LogRepo", "Failed to log event:" + e.getMessage()));
     }
 
-    private void incrementUserCounter(String userID, LogEntry.Category category){
+    private void incrementUserCounter(String userID, LogEntry.Category category, float units){
         // determines which field to increment
         String field;
         switch (category){
             case Drink:
-                usersRef.child(userID).child("totalDrinks").setValue(ServerValue.increment(1));
+                usersRef.child(userID).child("totalDrinks").setValue(ServerValue.increment(units));
                 break;
             case Vape:
-                usersRef.child(userID).child("totalVape").setValue(ServerValue.increment(1));
+                usersRef.child(userID).child("totalVape").setValue(ServerValue.increment(units));
                 break;
             case Cigarette:
-                usersRef.child(userID).child("totalCigarettes").setValue(ServerValue.increment(1));
+                usersRef.child(userID).child("totalCigarettes").setValue(ServerValue.increment(units));
             default:
         }
     }
