@@ -30,7 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-// Friends screen - search for and add/remove friends
+//friends screen search for and add/remove friends
 public class FriendsFragment extends Fragment {
 
     private EditText etSearch;
@@ -46,6 +46,7 @@ public class FriendsFragment extends Fragment {
     private final List<UserItem> searchResults = new ArrayList<>();
     private final List<UserItem> friendsList = new ArrayList<>();
 
+    //inflates the friends screen loads the signed-in user and wires up both lists
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_friends, container, false);
@@ -80,6 +81,7 @@ public class FriendsFragment extends Fragment {
         return view;
     }
 
+    //listens for changes to the current users friend list and refreshes the recycler view
     private void loadFriends() {
         dbRef.child("friends").child(myUid).addValueEventListener(new ValueEventListener() {
             @Override
@@ -105,6 +107,7 @@ public class FriendsFragment extends Fragment {
         });
     }
 
+    //searches the users node by display name and shows matches that are not already friends
     private void searchUsers() {
         String query = etSearch.getText().toString().trim();
         if (TextUtils.isEmpty(query)) {
@@ -112,7 +115,7 @@ public class FriendsFragment extends Fragment {
             return;
         }
 
-        // Query users whose displayName starts with the search term (case-sensitive)
+        //query users whose displayName starts with the search term (case sensitive)
         dbRef.child("users").orderByChild("displayName")
                 .startAt(query).endAt(query + "\uf8ff")
                 .get()
@@ -121,7 +124,7 @@ public class FriendsFragment extends Fragment {
                     for (DataSnapshot child : snapshot.getChildren()) {
                         String uid = child.child("uid").getValue(String.class);
                         String displayName = child.child("displayName").getValue(String.class);
-                        // Exclude self and already-added friends
+                        //exclude self and already added friends
                         if (uid != null && !uid.equals(myUid) && !friendUids.contains(uid)) {
                             searchResults.add(new UserItem(uid, displayName));
                         }
@@ -136,6 +139,7 @@ public class FriendsFragment extends Fragment {
                         Toast.makeText(getContext(), "Search failed: " + e.getMessage(), Toast.LENGTH_SHORT).show());
     }
 
+    //adds the selected user to the current users friends list in Firebase
     private void addFriend(UserItem user) {
         Map<String, Object> data = new HashMap<>();
         data.put("uid", user.uid);
@@ -144,7 +148,6 @@ public class FriendsFragment extends Fragment {
         dbRef.child("friends").child(myUid).child(user.uid).setValue(data)
                 .addOnSuccessListener(aVoid -> {
                     Toast.makeText(getContext(), user.displayName + " added", Toast.LENGTH_SHORT).show();
-                    // Remove from search results since they're now a friend
                     searchResults.removeIf(u -> u.uid.equals(user.uid));
                     searchAdapter.notifyDataSetChanged();
                     if (searchResults.isEmpty()) {
@@ -155,6 +158,7 @@ public class FriendsFragment extends Fragment {
                         Toast.makeText(getContext(), "Failed to add friend", Toast.LENGTH_SHORT).show());
     }
 
+    //removes the selected user from the current users friends list in Firebase
     private void removeFriend(UserItem user) {
         dbRef.child("friends").child(myUid).child(user.uid).removeValue()
                 .addOnSuccessListener(aVoid ->

@@ -30,6 +30,7 @@ public class SignUpActivity extends AppCompatActivity {
     private FirebaseAuth mAuth;
     private DatabaseReference dbRef;
 
+    // Initialises Firebase, binds the sign-up form fields, and connects button actions.
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -52,7 +53,7 @@ public class SignUpActivity extends AppCompatActivity {
         tvGoToLogin.setOnClickListener(v -> finish());
     }
 
-    // method called when sign up button is pressed
+    // Validates the form and creates a new Firebase Auth account for the user.
     private void attemptSignUp() {
         String displayName     = etDisplayName.getText().toString().trim();
         String email           = etEmail.getText().toString().trim();
@@ -95,7 +96,7 @@ public class SignUpActivity extends AppCompatActivity {
                 });
     }
 
-    // method called to save user data to the Firebase Realtime Database
+    // Writes the new user's profile and starting totals into the Realtime Database.
     private void saveUserToDatabase(String displayName, String email) {
         String uid = mAuth.getCurrentUser().getUid();
 
@@ -117,7 +118,7 @@ public class SignUpActivity extends AppCompatActivity {
                 });
     }
 
-    // method used to navigate to MainActivity after successful sign up
+    // Opens the main app screen and clears the auth screens from the back stack.
     private void navigateToMain() {
         Intent intent = new Intent(SignUpActivity.this, MainActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
