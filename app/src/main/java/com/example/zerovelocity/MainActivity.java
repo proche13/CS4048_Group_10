@@ -8,20 +8,31 @@ import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.android.material.appbar.MaterialToolbar;
 
 public class MainActivity extends AppCompatActivity {
 
+    //sets up the main shell, default fragment, bottom navigation, and profile shortcut
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // Load the Feed fragment as the default screen on launch
+        //load the feed fragment as the default screen on launch
         loadFragment(new FeedFragment());
 
+        MaterialToolbar topBar = findViewById(R.id.top_app_bar);
         BottomNavigationView bottomNav = findViewById(R.id.bottom_nav);
 
-        // Swap fragment based on which tab the user taps
+        topBar.setOnMenuItemClickListener(item -> {
+            if (item.getItemId() == R.id.action_profile) {
+                loadFragment(new ProfileFragment());
+                return true;
+            }
+            return false;
+        });
+
+        //swap fragment based on which tab the user taps in bottom nav bar
         bottomNav.setOnItemSelectedListener(item -> {
             Fragment selected = null;
 
@@ -44,7 +55,7 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    // Helper method to load a fragment into the container
+    //replaces the visible screen inside the activities fragment container.
     private void loadFragment(Fragment fragment) {
         FragmentManager fm = getSupportFragmentManager();
         FragmentTransaction ft = fm.beginTransaction();

@@ -1,60 +1,159 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="16dp">
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Sign Up"
-        android:textSize="24sp"
-        android:layout_marginBottom="24dp" />
-
-    <EditText
-        android:id="@+id/et_display_name"
+    android:background="@drawable/auth_screen_background"
+    android:fillViewport="true">
+    <!-- outer Container -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Display Name"
-        android:inputType="textPersonName"
-        android:layout_marginBottom="12dp" />
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="24dp">
+        <!-- Create account text -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="Create your account"
+            android:textColor="@color/auth_brand_ink"
+            android:textSize="32sp"
+            android:textStyle="bold" />
 
-    <EditText
-        android:id="@+id/et_email"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Email"
-        android:inputType="textEmailAddress"
-        android:layout_marginBottom="12dp" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:alpha="0.85"
+            android:text="Start tracking your consumption and comepete agaisnt your friends to be MOST POLLUTED!"
+            android:textAlignment="center"
+            android:textColor="@color/auth_brand_ink"
+            android:textSize="16sp" />
+        <!-- floating form panel -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:layout_marginBottom="24dp"
+            app:cardBackgroundColor="@color/auth_surface"
+            app:cardCornerRadius="28dp"
+            app:cardElevation="8dp"
+            app:strokeColor="@color/auth_card_stroke"
+            app:strokeWidth="1dp">
+            <!-- container -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="24dp">
+                <!-- sign up text -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Sign up"
+                    android:textColor="@color/auth_text_primary"
+                    android:textSize="28sp"
+                    android:textStyle="bold" />
 
-    <EditText
-        android:id="@+id/et_password"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Password"
-        android:inputType="textPassword"
-        android:layout_marginBottom="12dp" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:layout_marginBottom="20dp"
+                    android:text="Use your details below to get started"
+                    android:textColor="@color/auth_text_secondary"
+                    android:textSize="15sp" />
+                <!-- Display name input field -->
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.ZeroVelocity.AuthInputLayout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Display name">
 
-    <EditText
-        android:id="@+id/et_confirm_password"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Confirm Password"
-        android:inputType="textPassword"
-        android:layout_marginBottom="16dp" />
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/et_display_name"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="textPersonName"
+                        android:textColor="@color/auth_text_primary"
+                        android:textColorHint="@color/auth_text_secondary" />
+                </com.google.android.material.textfield.TextInputLayout>
+                <!-- email input field -->
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.ZeroVelocity.AuthInputLayout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:hint="Email">
 
-    <Button
-        android:id="@+id/btn_sign_up"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Sign Up"
-        android:layout_marginBottom="12dp" />
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/et_email"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="textEmailAddress"
+                        android:textColor="@color/auth_text_primary"
+                        android:textColorHint="@color/auth_text_secondary" />
+                </com.google.android.material.textfield.TextInputLayout>
+                <!-- Password input field -->
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.ZeroVelocity.AuthInputLayout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:hint="Password"
+                    app:endIconMode="password_toggle">
 
-    <TextView
-        android:id="@+id/tv_go_to_login"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Already have an account? Log in" />
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/et_password"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="textPassword"
+                        android:textColor="@color/auth_text_primary"
+                        android:textColorHint="@color/auth_text_secondary" />
+                </com.google.android.material.textfield.TextInputLayout>
+                <!-- confirm password input field -->
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.ZeroVelocity.AuthInputLayout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:hint="Confirm password"
+                    app:endIconMode="password_toggle">
 
-</LinearLayout>
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/et_confirm_password"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="textPassword"
+                        android:textColor="@color/auth_text_primary"
+                        android:textColorHint="@color/auth_text_secondary" />
+                </com.google.android.material.textfield.TextInputLayout>
+                <!-- create account button -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_sign_up"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="22dp"
+                    android:minHeight="56dp"
+                    android:text="Create Account"
+                    android:textAllCaps="false"
+                    android:textSize="16sp"
+                    app:backgroundTint="@color/auth_button"
+                    app:cornerRadius="18dp" />
+                <!-- go to login text link -->
+                <TextView
+                    android:id="@+id/tv_go_to_login"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_marginTop="18dp"
+                    android:text="Already have an account? Log in"
+                    android:textColor="@color/auth_link"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

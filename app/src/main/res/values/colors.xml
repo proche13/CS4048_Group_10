@@ -2,4 +2,16 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    <!-- setting the colors for the auth input form -->
+    <color name="auth_background_start">#F4E6D7</color>
+    <color name="auth_background_end">#E3F0EA</color>
+    <color name="auth_surface">#FDFBF7</color>
+    <color name="auth_card_stroke">#D8C8B4</color>
+    <color name="auth_brand_ink">#2F241D</color>
+    <color name="auth_text_primary">#2C211B</color>
+    <color name="auth_text_secondary">#766558</color>
+    <color name="auth_button">#B65E3C</color>
+    <color name="auth_link">#8D452A</color>
+    <color name="auth_input_fill">#FFF8F1</color>
+    <color name="auth_input_stroke">#C9B49C</color>
 </resources>

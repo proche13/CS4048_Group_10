@@ -4,6 +4,20 @@
         <!-- Customize your light theme here. -->
         <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
     </style>
+<!-- Reusable input field style for auth form appearance -->
+    <style name="Widget.ZeroVelocity.AuthInputLayout" parent="Widget.Material3.TextInputLayout.OutlinedBox">
+        <item name="boxBackgroundColor">@color/auth_input_fill</item>
+        <item name="boxCornerRadiusTopStart">18dp</item>
+        <item name="boxCornerRadiusTopEnd">18dp</item>
+        <item name="boxCornerRadiusBottomStart">18dp</item>
+        <item name="boxCornerRadiusBottomEnd">18dp</item>
+        <item name="boxStrokeColor">@color/auth_input_stroke</item>
+        <item name="hintTextColor">@color/auth_text_secondary</item>
+        <item name="android:textColorHint">@color/auth_text_secondary</item>
+        <item name="endIconTint">@color/auth_text_secondary</item>
+    </style>
 
     <style name="Theme.ZeroVelocity" parent="Base.Theme.ZeroVelocity" />
 </resources>
+
+
