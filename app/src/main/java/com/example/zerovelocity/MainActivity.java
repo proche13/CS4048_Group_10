@@ -45,6 +45,8 @@ public class MainActivity extends AppCompatActivity {
                 selected = new FriendsFragment();
             } else if (id == R.id.nav_leaderboard) {
                 selected = new LeaderboardFragment();
+            } else if (id == R.id.nav_calendar) {
+                selected = new CalendarFragment();
             }
 
             if (selected != null) {
