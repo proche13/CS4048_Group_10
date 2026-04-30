@@ -13,7 +13,6 @@ import java.util.Locale;
 
 public class LeaderboardAdapter extends RecyclerView.Adapter<LeaderboardAdapter.ViewHolder> {
 
-    // Each entry: rank, display name, total units
     static class Entry {
         final int rank;
         final String displayName;
@@ -45,7 +44,11 @@ public class LeaderboardAdapter extends RecyclerView.Adapter<LeaderboardAdapter.
         Entry entry = items.get(position);
         holder.tvRank.setText(String.valueOf(entry.rank));
         holder.tvName.setText(entry.displayName);
-        holder.tvUnits.setText(String.format(Locale.getDefault(), "%.1f", entry.totalUnits));
+        holder.tvUnits.setText(String.format(Locale.getDefault(), "%.1f u", entry.totalUnits));
+        if (!entry.displayName.isEmpty()) {
+            holder.tvInitial.setText(
+                    String.valueOf(entry.displayName.charAt(0)).toUpperCase(Locale.getDefault()));
+        }
     }
 
     @Override
@@ -57,12 +60,14 @@ public class LeaderboardAdapter extends RecyclerView.Adapter<LeaderboardAdapter.
         final TextView tvRank;
         final TextView tvName;
         final TextView tvUnits;
+        final TextView tvInitial;
 
         ViewHolder(View itemView) {
             super(itemView);
             tvRank = itemView.findViewById(R.id.tv_rank);
             tvName = itemView.findViewById(R.id.tv_name);
             tvUnits = itemView.findViewById(R.id.tv_units);
+            tvInitial = itemView.findViewById(R.id.tv_initial);
         }
     }
 }
