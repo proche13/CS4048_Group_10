@@ -24,11 +24,12 @@
             android:textStyle="bold" />
 
         <TextView
+            android:id="@+id/tv_subtitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:alpha="0.85"
-            android:text="Ranked by total units consumed"
+            android:text="Ranked by standard drinks"
             android:textAlignment="center"
             android:textColor="@color/auth_brand_ink"
             android:textSize="16sp" />
@@ -59,6 +60,45 @@
                 android:text="Friends"
                 android:textAllCaps="false"
                 android:textSize="15sp" />
+
+        </com.google.android.material.button.MaterialButtonToggleGroup>
+
+        <!-- Category toggle: separate unit types -->
+        <com.google.android.material.button.MaterialButtonToggleGroup
+            android:id="@+id/toggle_category"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            app:checkedButton="@id/btn_lb_drink"
+            app:selectionRequired="true"
+            app:singleSelection="true">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_lb_drink"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Drinks"
+                android:textAllCaps="false"
+                android:textSize="13sp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_lb_cigarette"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Cigarettes"
+                android:textAllCaps="false"
+                android:textSize="13sp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_lb_vape"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Vapes"
+                android:textAllCaps="false"
+                android:textSize="13sp" />
 
         </com.google.android.material.button.MaterialButtonToggleGroup>
 

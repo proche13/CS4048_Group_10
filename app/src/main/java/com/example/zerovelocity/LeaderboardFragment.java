@@ -41,17 +41,22 @@ public class LeaderboardFragment extends Fragment {
     private TextView name1, units1, initial1;
     private TextView name2, units2, initial2;
     private TextView name3, units3, initial3;
+    private TextView tvSubtitle;
     private LinearLayout podium2, podium3;
 
     private DatabaseReference logsRef, friendsRef;
     private ValueEventListener logsListener, friendsListener;
 
-    private final Map<String, Float> unitsByUser = new HashMap<>();
-    private final Map<String, String> nameByUser = new HashMap<>();
-    private final Set<String> friendUids = new HashSet<>();
+    // Maps keyed by uid — one per category
+    private final Map<String, Float> drinkUnitsByUser     = new HashMap<>();
+    private final Map<String, Float> cigarettesByUser     = new HashMap<>();
+    private final Map<String, Float> vapesByUser          = new HashMap<>();
+    private final Map<String, String> nameByUser          = new HashMap<>();
+    private final Set<String> friendUids                  = new HashSet<>();
 
     private String myUid;
-    private boolean friendsModeActive = false;
+    private boolean friendsModeActive   = false;
+    private LogEntry.Category activeCategory = LogEntry.Category.Drink;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -59,6 +64,8 @@ public class LeaderboardFragment extends Fragment {
 
         FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
         if (currentUser != null) myUid = currentUser.getUid();
+
+        tvSubtitle = view.findViewById(R.id.tv_subtitle);
 
         // Podium views
         podiumCard = view.findViewById(R.id.podium_card);
@@ -92,6 +99,17 @@ public class LeaderboardFragment extends Fragment {
             }
         });
 
+        // Toggle: category (Drinks / Cigarettes / Vapes)
+        MaterialButtonToggleGroup toggleCat = view.findViewById(R.id.toggle_category);
+        toggleCat.addOnButtonCheckedListener((group, checkedId, isChecked) -> {
+            if (!isChecked) return;
+            if (checkedId == R.id.btn_lb_drink)          activeCategory = LogEntry.Category.Drink;
+            else if (checkedId == R.id.btn_lb_cigarette) activeCategory = LogEntry.Category.Cigarette;
+            else                                         activeCategory = LogEntry.Category.Vape;
+            updateSubtitle();
+            rebuildLeaderboard();
+        });
+
         DatabaseReference dbRef = FirebaseDatabase.getInstance(
                 "https://mostpolluted-default-rtdb.europe-west1.firebasedatabase.app/").getReference();
 
@@ -100,15 +118,28 @@ public class LeaderboardFragment extends Fragment {
         logsListener = new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
-                unitsByUser.clear();
+                drinkUnitsByUser.clear();
+                cigarettesByUser.clear();
+                vapesByUser.clear();
                 nameByUser.clear();
                 for (DataSnapshot log : snapshot.getChildren()) {
-                    String uid = log.child("userID").getValue(String.class);
+                    String uid      = log.child("userID").getValue(String.class);
                     String username = log.child("username").getValue(String.class);
-                    Float units = log.child("units").getValue(Float.class);
-                    if (uid == null || units == null) continue;
-                    unitsByUser.put(uid, unitsByUser.getOrDefault(uid, 0f) + units);
+                    String category = log.child("category").getValue(String.class);
+                    Float units     = log.child("units").getValue(Float.class);
+                    if (uid == null || units == null || category == null) continue;
                     if (username != null) nameByUser.put(uid, username);
+                    switch (category) {
+                        case "Drink":
+                            drinkUnitsByUser.put(uid, drinkUnitsByUser.getOrDefault(uid, 0f) + units);
+                            break;
+                        case "Cigarette":
+                            cigarettesByUser.put(uid, cigarettesByUser.getOrDefault(uid, 0f) + units);
+                            break;
+                        case "Vape":
+                            vapesByUser.put(uid, vapesByUser.getOrDefault(uid, 0f) + units);
+                            break;
+                    }
                 }
                 rebuildLeaderboard();
             }
@@ -144,11 +175,26 @@ public class LeaderboardFragment extends Fragment {
         return view;
     }
 
-    // Rebuilds the sorted list based on the current mode and binds the UI
+    private void updateSubtitle() {
+        if (tvSubtitle == null) return;
+        switch (activeCategory) {
+            case Drink:      tvSubtitle.setText("Ranked by standard drinks");   break;
+            case Cigarette:  tvSubtitle.setText("Ranked by cigarettes smoked"); break;
+            case Vape:       tvSubtitle.setText("Ranked by vape puffs / sessions"); break;
+        }
+    }
+
+    // Rebuilds the sorted list based on the current mode and active category
     private void rebuildLeaderboard() {
+        Map<String, Float> source;
+        switch (activeCategory) {
+            case Cigarette: source = cigarettesByUser; break;
+            case Vape:      source = vapesByUser;      break;
+            default:        source = drinkUnitsByUser; break;
+        }
+
         List<Map.Entry<String, Float>> sorted = new ArrayList<>();
-        for (Map.Entry<String, Float> e : unitsByUser.entrySet()) {
-            // Friends mode: include self + friends; Global: include everyone
+        for (Map.Entry<String, Float> e : source.entrySet()) {
             if (!friendsModeActive
                     || e.getKey().equals(myUid)
                     || friendUids.contains(e.getKey())) {
