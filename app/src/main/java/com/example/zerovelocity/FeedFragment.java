@@ -128,10 +128,15 @@ public class FeedFragment extends Fragment {
 
                         Collections.sort(logs, (a, b) -> Long.compare(b.timestamp, a.timestamp));
 
-                        List<String> formattedFeed = new ArrayList<>();
+                        Map<String, Integer> ranksByUserId = getTopThreeRanks(totalsByUserId);
+
+                        List<FeedAdapter.FeedItem> formattedFeed = new ArrayList<>();
                         for (LogItem log : logs) {
                             String displayName = TextUtils.equals(log.userId, myUid) ? "You" : log.username;
-                            formattedFeed.add(displayName + " logged " + log.units + " " + log.category.toLowerCase());
+                            int rank = ranksByUserId.containsKey(log.userId) ? ranksByUserId.get(log.userId) : 0;
+                            formattedFeed.add(new FeedAdapter.FeedItem(
+                                    displayName + " logged " + log.units + " " + log.category.toLowerCase(),
+                                    rank));
                         }
 
                         adapter.update(formattedFeed);
@@ -161,6 +166,17 @@ public class FeedFragment extends Fragment {
                     public void onCancelled(@NonNull DatabaseError error) {
                     }
                 });
+    }
+
+    private Map<String, Integer> getTopThreeRanks(Map<String, Float> totalsByUserId) {
+        List<Map.Entry<String, Float>> rankedUsers = new ArrayList<>(totalsByUserId.entrySet());
+        Collections.sort(rankedUsers, (a, b) -> Float.compare(b.getValue(), a.getValue()));
+
+        Map<String, Integer> ranksByUserId = new HashMap<>();
+        for (int i = 0; i < rankedUsers.size() && i < 3; i++) {
+            ranksByUserId.put(rankedUsers.get(i).getKey(), i + 1);
+        }
+        return ranksByUserId;
     }
 
     static class LogItem {

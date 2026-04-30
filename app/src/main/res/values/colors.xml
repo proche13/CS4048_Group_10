@@ -14,4 +14,10 @@
     <color name="auth_link">#8D452A</color>
     <color name="auth_input_fill">#FFF8F1</color>
     <color name="auth_input_stroke">#C9B49C</color>
+    <color name="feed_gold">#F8E4A0</color>
+    <color name="feed_gold_stroke">#C9952D</color>
+    <color name="feed_silver">#E5E7EB</color>
+    <color name="feed_silver_stroke">#9CA3AF</color>
+    <color name="feed_bronze">#EBC3A0</color>
+    <color name="feed_bronze_stroke">#B36A35</color>
 </resources>

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/card_feed_item"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginBottom="12dp"
@@ -10,15 +11,34 @@
     app:strokeColor="@color/auth_card_stroke"
     app:strokeWidth="1dp">
 
-    <TextView
-        android:id="@+id/tv_feed_item"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:lineSpacingExtra="2dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
         android:paddingStart="18dp"
         android:paddingTop="16dp"
         android:paddingEnd="18dp"
-        android:paddingBottom="16dp"
-        android:textColor="@color/auth_text_primary"
-        android:textSize="16sp" />
+        android:paddingBottom="16dp">
+
+        <TextView
+            android:id="@+id/tv_feed_rank"
+            android:layout_width="44dp"
+            android:layout_height="32dp"
+            android:layout_marginEnd="12dp"
+            android:gravity="center"
+            android:textColor="@color/auth_text_primary"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/tv_feed_item"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:lineSpacingExtra="2dp"
+            android:textColor="@color/auth_text_primary"
+            android:textSize="16sp" />
+    </LinearLayout>
 </com.google.android.material.card.MaterialCardView>
