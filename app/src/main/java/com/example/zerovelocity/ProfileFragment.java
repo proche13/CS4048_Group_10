@@ -1,6 +1,11 @@
 package com.example.zerovelocity;
 
+import android.Manifest;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.net.Uri;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
@@ -8,11 +13,16 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
+import androidx.core.content.ContextCompat;
+import androidx.core.content.FileProvider;
 import androidx.fragment.app.Fragment;
 
 import com.google.android.material.textfield.TextInputEditText;
@@ -29,12 +39,18 @@ import com.google.firebase.database.ValueEventListener;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class ProfileFragment extends Fragment {
 
@@ -42,14 +58,55 @@ public class ProfileFragment extends Fragment {
     private FirebaseUser currentUser;
 
     private EditText etDisplayName;
+    private ImageView ivProfilePicture;
     private TextView tvEmail;
     private TextView tvFriendsCount;
     private TextView tvTotals;
     private TextView tvFriendsPreview;
     private Button btnDeleteAccount;
+    private Uri cameraProfilePictureUri;
+    private final ExecutorService imageExecutor = Executors.newSingleThreadExecutor();
+
+    private ActivityResultLauncher<String> profileGalleryLauncher;
+    private ActivityResultLauncher<Uri> profileCameraLauncher;
+    private ActivityResultLauncher<String> profileCameraPermissionLauncher;
 
     private ValueEventListener userListener;
     private ValueEventListener friendsListener;
+
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        // Opens the gallery and uploads the chosen image as the user's profile picture.
+        profileGalleryLauncher = registerForActivityResult(
+                new ActivityResultContracts.GetContent(),
+                uri -> {
+                    if (uri != null) {
+                        uploadProfilePicture(uri);
+                    }
+                });
+
+        // Stores a camera capture in the Uri created just before launching the camera.
+        profileCameraLauncher = registerForActivityResult(
+                new ActivityResultContracts.TakePicture(),
+                success -> {
+                    if (success && cameraProfilePictureUri != null) {
+                        uploadProfilePicture(cameraProfilePictureUri);
+                    }
+                });
+
+        // Requests camera permission only when the user chooses the camera option.
+        profileCameraPermissionLauncher = registerForActivityResult(
+                new ActivityResultContracts.RequestPermission(),
+                granted -> {
+                    if (granted) {
+                        openProfileCamera();
+                    } else {
+                        Toast.makeText(requireContext(), "Camera permission denied", Toast.LENGTH_SHORT).show();
+                    }
+                });
+    }
 
     //inflates the profile UI and loads the signed in user and starts listening for profile data
     @Override
@@ -64,16 +121,19 @@ public class ProfileFragment extends Fragment {
         rootRef = FirebaseRefs.root();
 
         etDisplayName = view.findViewById(R.id.et_profile_display_name);
+        ivProfilePicture = view.findViewById(R.id.iv_profile_picture);
         tvEmail = view.findViewById(R.id.tv_profile_email);
         tvFriendsCount = view.findViewById(R.id.tv_profile_friends_count);
         tvTotals = view.findViewById(R.id.tv_profile_totals);
         tvFriendsPreview = view.findViewById(R.id.tv_profile_friends_preview);
         Button btnSave = view.findViewById(R.id.btn_save_profile);
+        Button btnChangeProfilePicture = view.findViewById(R.id.btn_change_profile_picture);
         Button btnLogout = view.findViewById(R.id.btn_logout);
         btnDeleteAccount = view.findViewById(R.id.btn_delete_account);
 
         tvEmail.setText(currentUser.getEmail());
         btnSave.setOnClickListener(v -> saveProfile());
+        btnChangeProfilePicture.setOnClickListener(v -> showProfilePictureOptions());
         btnLogout.setOnClickListener(v -> logout());
         btnDeleteAccount.setOnClickListener(v -> showDeleteAccountDialog());
 
@@ -90,6 +150,7 @@ public class ProfileFragment extends Fragment {
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 String displayName = snapshot.child("displayName").getValue(String.class);
                 String email = snapshot.child("email").getValue(String.class);
+                String profilePictureUrl = snapshot.child("profilePictureUrl").getValue(String.class);
                 Double totalDrinks = snapshot.child("totalDrinks").getValue(Double.class);
                 Double totalCigarettes = snapshot.child("totalCigarettes").getValue(Double.class);
 
@@ -98,6 +159,9 @@ public class ProfileFragment extends Fragment {
                 }
 
                 tvEmail.setText(email != null ? email : currentUser.getEmail());
+                if (!TextUtils.isEmpty(profilePictureUrl)) {
+                    loadProfilePicture(profilePictureUrl);
+                }
                 tvTotals.setText(String.format(
                         Locale.getDefault(),
                         "Drinks: %.0f  |  Cigarettes: %.0f",
@@ -176,6 +240,102 @@ public class ProfileFragment extends Fragment {
                         Toast.makeText(getContext(), "Failed to update profile", Toast.LENGTH_SHORT).show());
     }
 
+    //lets the user choose between camera and gallery when replacing their profile picture
+    private void showProfilePictureOptions() {
+        String[] options = {"Take a photo", "Choose from gallery"};
+        new AlertDialog.Builder(requireContext())
+                .setTitle("Change profile picture")
+                .setItems(options, (dialog, which) -> {
+                    if (which == 0) {
+                        requestCameraThenOpen();
+                    } else {
+                        profileGalleryLauncher.launch("image/*");
+                    }
+                })
+                .show();
+    }
+
+    //checks camera permission before opening the device camera
+    private void requestCameraThenOpen() {
+        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA)
+                == PackageManager.PERMISSION_GRANTED) {
+            openProfileCamera();
+        } else {
+            profileCameraPermissionLauncher.launch(Manifest.permission.CAMERA);
+        }
+    }
+
+    //creates a private cache file and gives the camera permission to write into it
+    private void openProfileCamera() {
+        try {
+            File dir = new File(requireContext().getCacheDir(), "images");
+            dir.mkdirs();
+            File tmp = File.createTempFile("profile_", ".jpg", dir);
+            cameraProfilePictureUri = FileProvider.getUriForFile(
+                    requireContext(),
+                    requireContext().getPackageName() + ".fileprovider",
+                    tmp);
+            profileCameraLauncher.launch(cameraProfilePictureUri);
+        } catch (IOException e) {
+            Toast.makeText(requireContext(), "Could not open camera", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    //uploads the image, stores its download URL, and refreshes both profile screen and toolbar icon
+    private void uploadProfilePicture(Uri imageUri) {
+        if (currentUser == null) {
+            return;
+        }
+
+        ivProfilePicture.setImageURI(imageUri);
+        StorageReference profileImageRef = FirebaseStorage.getInstance()
+                .getReference("profilePictures/" + currentUser.getUid() + "/profile.jpg");
+
+        profileImageRef.putFile(imageUri)
+                .continueWithTask(task -> {
+                    if (!task.isSuccessful() && task.getException() != null) {
+                        throw task.getException();
+                    }
+                    return profileImageRef.getDownloadUrl();
+                })
+                .addOnSuccessListener(downloadUri -> {
+                    UserProfileChangeRequest request = new UserProfileChangeRequest.Builder()
+                            .setPhotoUri(downloadUri)
+                            .build();
+                    currentUser.updateProfile(request);
+
+                    rootRef.child("users")
+                            .child(currentUser.getUid())
+                            .child("profilePictureUrl")
+                            .setValue(downloadUri.toString())
+                            .addOnSuccessListener(unused -> {
+                                Toast.makeText(getContext(), "Profile picture updated", Toast.LENGTH_SHORT).show();
+                                if (getActivity() instanceof MainActivity) {
+                                    ((MainActivity) getActivity()).refreshProfileIcon();
+                                }
+                            })
+                            .addOnFailureListener(e ->
+                                    Toast.makeText(getContext(), "Image uploaded but profile was not saved",
+                                            Toast.LENGTH_LONG).show());
+                })
+                .addOnFailureListener(e ->
+                        Toast.makeText(getContext(), "Could not upload profile picture: " + e.getMessage(),
+                                Toast.LENGTH_LONG).show());
+    }
+
+    //downloads the existing profile photo without blocking the UI thread
+    private void loadProfilePicture(String profilePictureUrl) {
+        imageExecutor.execute(() -> {
+            try (InputStream input = new URL(profilePictureUrl).openStream()) {
+                Bitmap bitmap = BitmapFactory.decodeStream(input);
+                if (bitmap != null && isAdded()) {
+                    requireActivity().runOnUiThread(() -> ivProfilePicture.setImageBitmap(bitmap));
+                }
+            } catch (Exception ignored) {
+            }
+        });
+    }
+
     //signs out without deleting anything and returns to the login screen
     private void logout() {
         FirebaseAuth.getInstance().signOut();
@@ -248,7 +408,6 @@ public class ProfileFragment extends Fragment {
                                                 .addOnSuccessListener(requestsSnapshot -> {
                                                     Map<String, Object> updates = new HashMap<>();
                                                     updates.put("users/" + uid, null);
-                                                    updates.put("friends/" + uid, null);
                                                     updates.put("friendRequests/" + uid, null);
 
                                                     for (DataSnapshot log : logSnapshot.getChildren()) {
@@ -256,11 +415,19 @@ public class ProfileFragment extends Fragment {
                                                     }
 
                                                     for (DataSnapshot friend : friendsSnapshot.getChildren()) {
-                                                        updates.put("friends/" + friend.getKey() + "/" + uid, null);
+                                                        String friendUid = friend.getKey();
+                                                        if (!TextUtils.isEmpty(friendUid)) {
+                                                            // Delete both sides one child at a time so the write matches the rules.
+                                                            updates.put("friends/" + uid + "/" + friendUid, null);
+                                                            updates.put("friends/" + friendUid + "/" + uid, null);
+                                                        }
                                                     }
 
                                                     for (DataSnapshot request : requestsSnapshot.getChildren()) {
-                                                        updates.put("friendRequests/" + request.getKey() + "/" + uid, null);
+                                                        String senderUid = request.getKey();
+                                                        if (!TextUtils.isEmpty(senderUid)) {
+                                                            updates.put("friendRequests/" + senderUid + "/" + uid, null);
+                                                        }
                                                     }
 
                                                     rootRef.updateChildren(updates)
@@ -359,5 +526,7 @@ public class ProfileFragment extends Fragment {
                 rootRef.child("friends").child(currentUser.getUid()).removeEventListener(friendsListener);
             }
         }
+
+        imageExecutor.shutdownNow();
     }
 }
