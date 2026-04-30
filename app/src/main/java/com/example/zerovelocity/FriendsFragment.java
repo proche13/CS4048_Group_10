@@ -21,7 +21,6 @@ import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
-import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
@@ -65,8 +64,7 @@ public class FriendsFragment extends Fragment {
         if (currentUser == null) return view;
         myUid = currentUser.getUid();
 
-        dbRef = FirebaseDatabase.getInstance("https://mostpolluted-default-rtdb.europe-west1.firebasedatabase.app/")
-                .getReference();
+        dbRef = FirebaseRefs.root();
 
         etSearch = view.findViewById(R.id.et_search);
         MaterialButton btnSearch = view.findViewById(R.id.btn_search);
@@ -173,7 +171,7 @@ public class FriendsFragment extends Fragment {
                     for (DataSnapshot child : snapshot.getChildren()) {
                         String uid = child.child("uid").getValue(String.class);
                         String displayName = child.child("displayName").getValue(String.class);
-                        if (uid != null && !uid.equals(myUid)
+                        if (uid != null && displayName != null && !uid.equals(myUid)
                                 && !friendUids.contains(uid)
                                 && !sentRequestUids.contains(uid)) {
                             searchResults.add(new UserItem(uid, displayName));
@@ -231,17 +229,18 @@ public class FriendsFragment extends Fragment {
             themData.put("uid", requester.uid);
             themData.put("displayName", requester.displayName);
 
-            // write friendship both ways
-            dbRef.child("friends").child(myUid).child(requester.uid).setValue(themData);
-            dbRef.child("friends").child(requester.uid).child(myUid).setValue(meData);
+            Map<String, Object> updates = new HashMap<>();
+            updates.put("friends/" + myUid + "/" + requester.uid, themData);
+            updates.put("friends/" + requester.uid + "/" + myUid, meData);
+            updates.put("friendRequests/" + myUid + "/" + requester.uid, null);
 
-            // remove the request
-            dbRef.child("friendRequests").child(myUid).child(requester.uid).removeValue()
+            dbRef.updateChildren(updates)
                     .addOnSuccessListener(aVoid ->
                             Toast.makeText(getContext(), requester.displayName + " added as a friend", Toast.LENGTH_SHORT).show())
                     .addOnFailureListener(e ->
-                            Toast.makeText(getContext(), "Failed to accept request", Toast.LENGTH_SHORT).show());
-        });
+                            Toast.makeText(getContext(), "Failed to accept request: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+        }).addOnFailureListener(e ->
+                Toast.makeText(getContext(), "Failed to load your profile: " + e.getMessage(), Toast.LENGTH_SHORT).show());
     }
 
     // declines a friend request by removing it from friendRequests
@@ -255,11 +254,14 @@ public class FriendsFragment extends Fragment {
 
     // removes a friend from both sides of the friends list
     private void removeFriend(UserItem user) {
-        dbRef.child("friends").child(myUid).child(user.uid).removeValue();
-        dbRef.child("friends").child(user.uid).child(myUid).removeValue()
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("friends/" + myUid + "/" + user.uid, null);
+        updates.put("friends/" + user.uid + "/" + myUid, null);
+
+        dbRef.updateChildren(updates)
                 .addOnSuccessListener(aVoid ->
                         Toast.makeText(getContext(), user.displayName + " removed", Toast.LENGTH_SHORT).show())
                 .addOnFailureListener(e ->
-                        Toast.makeText(getContext(), "Failed to remove friend", Toast.LENGTH_SHORT).show());
+                        Toast.makeText(getContext(), "Failed to remove friend: " + e.getMessage(), Toast.LENGTH_SHORT).show());
     }
 }

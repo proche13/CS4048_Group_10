@@ -13,7 +13,6 @@ import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 
 import com.google.firebase.database.DatabaseReference;
-import com.google.firebase.database.FirebaseDatabase;
 
 import java.util.Calendar;
 import java.util.HashMap;
@@ -62,7 +61,7 @@ public class CalendarFragment extends Fragment {
     }
 
     private void saveEvent(String title, long date){
-        DatabaseReference dbRef = FirebaseDatabase.getInstance().getReference("Events");
+        DatabaseReference dbRef = FirebaseRefs.root().child("Events");
 
         String eventId = dbRef.push().getKey();
 

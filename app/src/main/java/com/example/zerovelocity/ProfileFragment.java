@@ -19,7 +19,6 @@ import com.google.firebase.auth.UserProfileChangeRequest;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
-import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
@@ -50,9 +49,7 @@ public class ProfileFragment extends Fragment {
             return view;
         }
 
-        rootRef = FirebaseDatabase
-                .getInstance("https://mostpolluted-default-rtdb.europe-west1.firebasedatabase.app/")
-                .getReference();
+        rootRef = FirebaseRefs.root();
 
         etDisplayName = view.findViewById(R.id.et_profile_display_name);
         tvEmail = view.findViewById(R.id.tv_profile_email);

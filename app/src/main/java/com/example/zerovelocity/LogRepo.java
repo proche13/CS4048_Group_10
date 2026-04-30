@@ -2,7 +2,6 @@ package com.example.zerovelocity;
 
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseReference;
-import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ServerValue;
 
 import java.util.ArrayList;
@@ -25,9 +24,7 @@ public class LogRepo {
     private final DatabaseReference prefsRef;
 
     private LogRepo() {
-        DatabaseReference root = FirebaseDatabase
-                .getInstance("https://mostpolluted-default-rtdb.europe-west1.firebasedatabase.app/")
-                .getReference();
+        DatabaseReference root = FirebaseRefs.root();
         logsRef  = root.child("consumptionLogs");
         usersRef = root.child("users");
         prefsRef = root.child("userPreferences");
