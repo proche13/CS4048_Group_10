@@ -222,13 +222,15 @@ public class LogDrinkFragment extends Fragment {
                                     Toast.makeText(requireContext(), "Logged!", Toast.LENGTH_SHORT).show();
                                     clearForm();
                                 })
-                                .addOnFailureListener(e -> onUploadError()))
-                .addOnFailureListener(e -> onUploadError());
+                                .addOnFailureListener(this::onUploadError))
+                .addOnFailureListener(this::onUploadError);
     }
 
-    private void onUploadError() {
+    private void onUploadError(Exception e) {
         setBusy(false);
-        Toast.makeText(requireContext(), "Photo upload failed — please try again", Toast.LENGTH_SHORT).show();
+        String msg = e != null ? e.getMessage() : "unknown error";
+        Toast.makeText(requireContext(), "Upload failed: " + msg, Toast.LENGTH_LONG).show();
+        android.util.Log.e("LogDrink", "Upload error: " + msg);
     }
 
     private void setBusy(boolean busy) {
