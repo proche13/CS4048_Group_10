@@ -50,7 +50,6 @@ public class LeaderboardFragment extends Fragment {
     // Maps keyed by uid — one per category
     private final Map<String, Float> drinkUnitsByUser     = new HashMap<>();
     private final Map<String, Float> cigarettesByUser     = new HashMap<>();
-    private final Map<String, Float> vapesByUser          = new HashMap<>();
     private final Map<String, String> nameByUser          = new HashMap<>();
     private final Set<String> friendUids                  = new HashSet<>();
 
@@ -99,13 +98,12 @@ public class LeaderboardFragment extends Fragment {
             }
         });
 
-        // Toggle: category (Drinks / Cigarettes / Vapes)
+        // Toggle: category (Drinks / Cigarettes)
         MaterialButtonToggleGroup toggleCat = view.findViewById(R.id.toggle_category);
         toggleCat.addOnButtonCheckedListener((group, checkedId, isChecked) -> {
             if (!isChecked) return;
             if (checkedId == R.id.btn_lb_drink)          activeCategory = LogEntry.Category.Drink;
             else if (checkedId == R.id.btn_lb_cigarette) activeCategory = LogEntry.Category.Cigarette;
-            else                                         activeCategory = LogEntry.Category.Vape;
             updateSubtitle();
             rebuildLeaderboard();
         });
@@ -120,7 +118,6 @@ public class LeaderboardFragment extends Fragment {
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 drinkUnitsByUser.clear();
                 cigarettesByUser.clear();
-                vapesByUser.clear();
                 nameByUser.clear();
                 for (DataSnapshot log : snapshot.getChildren()) {
                     String uid      = log.child("userID").getValue(String.class);
@@ -135,9 +132,6 @@ public class LeaderboardFragment extends Fragment {
                             break;
                         case "Cigarette":
                             cigarettesByUser.put(uid, cigarettesByUser.getOrDefault(uid, 0f) + units);
-                            break;
-                        case "Vape":
-                            vapesByUser.put(uid, vapesByUser.getOrDefault(uid, 0f) + units);
                             break;
                     }
                 }
@@ -180,7 +174,6 @@ public class LeaderboardFragment extends Fragment {
         switch (activeCategory) {
             case Drink:      tvSubtitle.setText("Ranked by standard drinks");   break;
             case Cigarette:  tvSubtitle.setText("Ranked by cigarettes smoked"); break;
-            case Vape:       tvSubtitle.setText("Ranked by vape puffs / sessions"); break;
         }
     }
 
@@ -189,7 +182,6 @@ public class LeaderboardFragment extends Fragment {
         Map<String, Float> source;
         switch (activeCategory) {
             case Cigarette: source = cigarettesByUser; break;
-            case Vape:      source = vapesByUser;      break;
             default:        source = drinkUnitsByUser; break;
         }
 

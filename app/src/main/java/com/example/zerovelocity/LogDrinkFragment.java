@@ -33,7 +33,7 @@ import java.util.ArrayList;
 import java.util.UUID;
 
 // This fragment is the log entry screen.
-// The user picks a category (Drink, Cigarette or Vape), fills in the details
+// The user picks a category (Drink or Cigarette), fills in the details
 // and takes or picks a photo before submitting. The photo is uploaded to
 // Firebase Storage and the rest of the data goes to the Realtime Database
 // through LogDrinkViewModel and LogRepo.
@@ -121,12 +121,10 @@ public class LogDrinkFragment extends Fragment {
         viewModel.loadSuggestions(currentCategory);
 
         // when the user switches category we update the field hints and reload suggestions
-        // for example switching to Vape changes "Drink Name" to "Flavour"
         toggleCategory.addOnButtonCheckedListener((group, checkedId, isChecked) -> {
             if (!isChecked) return;
             if (checkedId == R.id.btn_log_drink)           currentCategory = LogEntry.Category.Drink;
             else if (checkedId == R.id.btn_log_cigarette)  currentCategory = LogEntry.Category.Cigarette;
-            else                                           currentCategory = LogEntry.Category.Vape;
             updateHintsForCategory();
             viewModel.loadSuggestions(currentCategory);
         });
@@ -161,10 +159,6 @@ public class LogDrinkFragment extends Fragment {
             case Cigarette:
                 tilItemName.setHint("Brand");
                 tilUnits.setHint("Number of cigarettes");
-                break;
-            case Vape:
-                tilItemName.setHint("Flavour");
-                tilUnits.setHint("Puffs / sessions");
                 break;
         }
         etItemName.setText("");

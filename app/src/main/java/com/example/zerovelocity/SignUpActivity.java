@@ -105,7 +105,6 @@ public class SignUpActivity extends AppCompatActivity {
         user.put("displayName", displayName);
         user.put("email", email);
         user.put("totalDrinks", 0);
-        user.put("totalVapes", 0);
         user.put("totalCigarettes", 0);
         user.put("createdAt", System.currentTimeMillis());
 

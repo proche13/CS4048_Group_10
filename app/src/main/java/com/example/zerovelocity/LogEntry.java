@@ -4,15 +4,14 @@ public class LogEntry {
 
     public enum Category {
         Drink,
-        Cigarette,
-        Vape
+        Cigarette
     }
 
     private final String eventId;
     private final String userID;
     private final String username;
     private final Category category;
-    private final String itemName;   // drink name / cigarette brand / vape flavour
+    private final String itemName;   // drink name / cigarette brand
     private final float units;
     private final String description;
     private final String location;

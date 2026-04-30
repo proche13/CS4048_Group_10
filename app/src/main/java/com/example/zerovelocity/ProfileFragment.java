@@ -78,7 +78,6 @@ public class ProfileFragment extends Fragment {
                 String displayName = snapshot.child("displayName").getValue(String.class);
                 String email = snapshot.child("email").getValue(String.class);
                 Double totalDrinks = snapshot.child("totalDrinks").getValue(Double.class);
-                Double totalVapes = snapshot.child("totalVapes").getValue(Double.class);
                 Double totalCigarettes = snapshot.child("totalCigarettes").getValue(Double.class);
 
                 if (!etDisplayName.hasFocus()) {
@@ -88,9 +87,8 @@ public class ProfileFragment extends Fragment {
                 tvEmail.setText(email != null ? email : currentUser.getEmail());
                 tvTotals.setText(String.format(
                         Locale.getDefault(),
-                        "Drinks: %.0f  |  Vapes: %.0f  |  Cigarettes: %.0f",
+                        "Drinks: %.0f  |  Cigarettes: %.0f",
                         totalDrinks != null ? totalDrinks : 0d,
-                        totalVapes != null ? totalVapes : 0d,
                         totalCigarettes != null ? totalCigarettes : 0d
                 ));
             }
