@@ -107,19 +107,26 @@ public class SignUpActivity extends AppCompatActivity {
 
         setLoading(true);
         String normalizedDisplayName = displayName.toLowerCase();
-        // Query the lowercase username field so "Test" and "test" cannot both sign up to prevent dup display names
-        // in find friends
+        createAccount(displayName, normalizedDisplayName, email, password);
+    }
+
+    private void checkUsernameAndContinue(String displayName, String normalizedDisplayName, String email) {
+        // Query after auth sign up so the database request satisfies auth != null rules clean up code upon failing to remove auth account if unsucceful signup
+        // this still prevents dupe names such as "Test" and "test" in friend search
         dbRef.orderByChild("displayNameLowercase").equalTo(normalizedDisplayName).get()
                 .addOnSuccessListener(snapshot -> {
                     if (snapshot.exists()) {
+                        cleanupCreatedUserAfterFailure();
                         etDisplayName.setError("Username is already taken");
                         etDisplayName.requestFocus();
                         setLoading(false);
                     } else {
-                        createAccount(displayName, normalizedDisplayName, email, password);
+                        uploadProfilePicture(displayName, normalizedDisplayName, email);
                     }
                 })
                 .addOnFailureListener(e -> {
+                    //method called to clean up auth accounts if failed
+                    cleanupCreatedUserAfterFailure();
                     setLoading(false);
                     Toast.makeText(this, "Could not check username: " + e.getMessage(),
                             Toast.LENGTH_LONG).show();
@@ -226,7 +233,7 @@ public class SignUpActivity extends AppCompatActivity {
         mAuth.createUserWithEmailAndPassword(email, password)
                 .addOnCompleteListener(this, task -> {
                     if (task.isSuccessful() && mAuth.getCurrentUser() != null) {
-                        uploadProfilePicture(displayName, normalizedDisplayName, email);
+                        checkUsernameAndContinue(displayName, normalizedDisplayName, email);
                     } else {
                         setLoading(false);
                         Toast.makeText(this, "Sign up failed: " +
