@@ -5,10 +5,12 @@ import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import com.google.android.material.button.MaterialButton;
+import com.google.android.material.card.MaterialCardView;
 
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
@@ -36,6 +38,8 @@ public class FriendsFragment extends Fragment {
     private EditText etSearch;
     private TextView tvSearchHeader;
     private TextView tvFriendsHeader;
+    private MaterialCardView cardSearchResults;
+    private MaterialCardView cardFriends;
 
     private DatabaseReference dbRef;
     private String myUid;
@@ -59,9 +63,11 @@ public class FriendsFragment extends Fragment {
                 .getReference();
 
         etSearch = view.findViewById(R.id.et_search);
-        Button btnSearch = view.findViewById(R.id.btn_search);
+        MaterialButton btnSearch = view.findViewById(R.id.btn_search);
         tvSearchHeader = view.findViewById(R.id.tv_search_header);
         tvFriendsHeader = view.findViewById(R.id.tv_friends_header);
+        cardSearchResults = view.findViewById(R.id.card_search_results);
+        cardFriends = view.findViewById(R.id.card_friends);
 
         RecyclerView rvSearchResults = view.findViewById(R.id.rv_search_results);
         RecyclerView rvFriends = view.findViewById(R.id.rv_friends);
@@ -97,7 +103,9 @@ public class FriendsFragment extends Fragment {
                     }
                 }
                 friendsAdapter.notifyDataSetChanged();
-                tvFriendsHeader.setVisibility(friendsList.isEmpty() ? View.GONE : View.VISIBLE);
+                boolean hasFriends = !friendsList.isEmpty();
+                tvFriendsHeader.setVisibility(hasFriends ? View.VISIBLE : View.GONE);
+                cardFriends.setVisibility(hasFriends ? View.VISIBLE : View.GONE);
             }
 
             @Override
@@ -130,8 +138,10 @@ public class FriendsFragment extends Fragment {
                         }
                     }
                     searchAdapter.notifyDataSetChanged();
-                    tvSearchHeader.setVisibility(searchResults.isEmpty() ? View.GONE : View.VISIBLE);
-                    if (searchResults.isEmpty()) {
+                    boolean hasResults = !searchResults.isEmpty();
+                    tvSearchHeader.setVisibility(hasResults ? View.VISIBLE : View.GONE);
+                    cardSearchResults.setVisibility(hasResults ? View.VISIBLE : View.GONE);
+                    if (!hasResults) {
                         Toast.makeText(getContext(), "No users found", Toast.LENGTH_SHORT).show();
                     }
                 })
@@ -152,6 +162,7 @@ public class FriendsFragment extends Fragment {
                     searchAdapter.notifyDataSetChanged();
                     if (searchResults.isEmpty()) {
                         tvSearchHeader.setVisibility(View.GONE);
+                        cardSearchResults.setVisibility(View.GONE);
                     }
                 })
                 .addOnFailureListener(e ->
