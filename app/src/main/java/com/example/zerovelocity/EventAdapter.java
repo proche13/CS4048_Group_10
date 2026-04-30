@@ -19,6 +19,7 @@ public class EventAdapter extends RecyclerView.Adapter<EventAdapter.EventViewHol
 
     private final List<EventItem> events = new ArrayList<>();
     private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("EEE, dd MMM yyyy", Locale.getDefault());
+    private static final SimpleDateFormat TIME_FORMAT = new SimpleDateFormat("dd MMM HH:mm", Locale.getDefault());
 
     public void setEvents(List<EventItem> newEvents){
         events.clear();
@@ -38,7 +39,7 @@ public class EventAdapter extends RecyclerView.Adapter<EventAdapter.EventViewHol
     public void onBindViewHolder(@NonNull EventViewHolder holder, int position){
         EventItem event = events.get(position);
         holder.tvTitle.setText(event.title);
-        holder.tvDate.setText(DATE_FORMAT.format(new Date(event.date)));
+    holder.tvDate.setText(TIME_FORMAT.format(new Date(event.startTime)) + "->" + TIME_FORMAT.format(new Date(event.endTime)));
     }
 
     @Override

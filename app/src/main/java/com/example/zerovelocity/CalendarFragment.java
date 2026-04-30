@@ -1,6 +1,8 @@
 package com.example.zerovelocity;
 
 import android.app.AlertDialog;
+import android.app.DatePickerDialog;
+import android.app.TimePickerDialog;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -29,6 +31,7 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.List;
+import java.util.function.LongConsumer;
 
 public class CalendarFragment extends Fragment {
 
@@ -90,9 +93,13 @@ public class CalendarFragment extends Fragment {
                     String id = child.getKey();
                     String title = child.child("title").getValue(String.class);
                     Long date = child.child("date").getValue(Long.class);
+                    Long startTime = child.child("startTime").getValue(Long.class);
+                    Long endTime = child.child("endTime").getValue(Long.class);
 
                     if (title != null && date != null){
-                        allEvents.add(new EventItem(id, title, date));
+                        allEvents.add(new EventItem(id, title, date,
+                                startTime != null ? startTime : date ,
+                                endTime != null ? endTime : date));
                     }
                 }
                 filterAndDisplay();
@@ -124,25 +131,63 @@ public class CalendarFragment extends Fragment {
     private void showAddEventDialog(){
         if (getContext() == null) return;
         AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
+        View dialogView = LayoutInflater.from(getContext()).inflate(R.layout.dialog_add_event, null);
 
-        final EditText input = new EditText(getContext());
-        input.setHint("Event Title");
+        EditText inputTitle = dialogView.findViewById(R.id.inputEventTitle);
+        Button btnStartDate = dialogView.findViewById(R.id.btnPickStartDate);
+        Button btnEndDate = dialogView.findViewById(R.id.btnPickEndDate);
+        TextView tvStartChosen = dialogView.findViewById(R.id.tvStartChosen);
+        TextView tvEndChosen = dialogView.findViewById(R.id.tvEndChosen);
+
+        final long[] startMillis = {selectedDate};
+        final long[] endMillis = {selectedDate};
+
+        SimpleDateFormat fmt = new SimpleDateFormat("dd MMM yyyy HH:MM", Locale.getDefault());
+
+        btnStartDate.setOnClickListener(v -> pickDateTime(startMillis, chosen -> {
+            startMillis[0] = chosen;
+            tvStartChosen.setText("Start: " + fmt.format(new Date(chosen)));
+        }));
+
+        btnEndDate.setOnClickListener(v -> pickDateTime(endMillis, chosen -> {
+            endMillis[0] = chosen;
+            tvEndChosen.setText("End: " + fmt.format(new Date(chosen)));
+        }));
 
         builder.setTitle("Add Event on " + DATE_FORMAT.format(new Date(selectedDate)))
-                .setView(input)
+                .setView(dialogView)
                 .setPositiveButton("Save", (dialog, which) -> {
-                    String eventTitle = input.getText().toString().trim();
+                    String eventTitle = inputTitle.getText().toString().trim();
                     if(eventTitle.isEmpty()){
                         Toast.makeText(getContext(), "Please enter an event name", Toast.LENGTH_SHORT).show();
                         return;
                     }
-                    saveEvent(eventTitle, selectedDate);
+                    if (endMillis[0] < startMillis[0]){
+                        Toast.makeText(getContext(), "End time must be after start time", Toast.LENGTH_SHORT).show();
+                    }
+                    saveEvent(eventTitle, selectedDate, startMillis[0], endMillis[0]);
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
     }
 
-    private void saveEvent(String title, long date){
+    private void pickDateTime(long[] current, LongConsumer onPicked){
+        Calendar cal = Calendar.getInstance();
+        cal.setTimeInMillis(current[0]);
+
+        new DatePickerDialog(getContext(), (dp, year, month, day) -> {
+            cal.set(year, month, day);
+            new TimePickerDialog(getContext(), (tp, hour, minute) -> {
+                cal.set(Calendar.HOUR_OF_DAY, hour);
+                cal.set(Calendar.MINUTE, minute);
+                cal.set(Calendar.SECOND, 0);
+                cal.set(Calendar.MILLISECOND, 0);
+                onPicked.accept(cal.getTimeInMillis());
+            }, cal.get(Calendar.HOUR_OF_DAY), cal.get(Calendar.MINUTE), true).show();
+        }, cal.get(Calendar.YEAR), cal.get(Calendar.MONTH), cal.get(Calendar.DAY_OF_MONTH)).show();
+    }
+
+    private void saveEvent(String title, long date, long startTime, long endTime){
         DatabaseReference dbRef = FirebaseRefs.root().child("Events");
 
         String eventId = dbRef.push().getKey();
@@ -154,6 +199,8 @@ public class CalendarFragment extends Fragment {
         Map<String, Object> event = new HashMap<>();
         event.put("title", title);
         event.put("date", date);
+        event.put("startTime", startTime);
+        event.put("endTime", endTime);
 
         dbRef.child(eventId).setValue(event)
                 .addOnSuccessListener(unused ->
