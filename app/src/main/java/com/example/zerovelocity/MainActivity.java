@@ -2,6 +2,13 @@ package com.example.zerovelocity;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffXfermode;
+import android.graphics.Rect;
+import android.graphics.RectF;
 import android.graphics.drawable.BitmapDrawable;
 import android.net.Uri;
 import android.os.Bundle;
@@ -119,7 +126,7 @@ public class MainActivity extends AppCompatActivity {
                     return;
                 }
 
-                Bitmap iconBitmap = Bitmap.createScaledBitmap(bitmap, 96, 96, true);
+                Bitmap iconBitmap = createCircularProfileIcon(bitmap);
                 runOnUiThread(() -> {
                     MenuItem profileItem = topBar.getMenu().findItem(R.id.action_profile);
                     if (profileItem != null) {
@@ -129,5 +136,33 @@ public class MainActivity extends AppCompatActivity {
             } catch (Exception ignored) {
             }
         });
+    }
+
+    // crops the profile photo into a circle and draws the orange theme border around it
+    private Bitmap createCircularProfileIcon(Bitmap source) {
+        int size = 96;
+        int borderWidth = 6;
+        Bitmap scaled = Bitmap.createScaledBitmap(source, size, size, true);
+        Bitmap output = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(output);
+
+        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        Rect rect = new Rect(0, 0, size, size);
+        RectF rectF = new RectF(rect);
+        float radius = size / 2f;
+
+        canvas.drawARGB(0, 0, 0, 0);
+        canvas.drawOval(rectF, paint);
+
+        paint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.SRC_IN));
+        canvas.drawBitmap(scaled, rect, rect, paint);
+        paint.setXfermode(null);
+
+        paint.setStyle(Paint.Style.STROKE);
+        paint.setStrokeWidth(borderWidth);
+        paint.setColor(Color.rgb(182, 94, 60));
+        canvas.drawCircle(radius, radius, radius - borderWidth / 2f, paint);
+
+        return output;
     }
 }

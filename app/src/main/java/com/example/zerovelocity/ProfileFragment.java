@@ -1,5 +1,6 @@
 package com.example.zerovelocity;
 
+import android.Manifest;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -22,6 +23,9 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.FileProvider;
 import androidx.fragment.app.Fragment;
 
+import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.textfield.TextInputLayout;
+import com.google.firebase.auth.EmailAuthProvider;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.UserProfileChangeRequest;
@@ -59,6 +63,7 @@ public class ProfileFragment extends Fragment {
     private Uri cameraProfilePictureUri;
     private ActivityResultLauncher<String> profilePicturePicker;
     private ActivityResultLauncher<Uri> cameraPictureLauncher;
+    private ActivityResultLauncher<String> cameraPermissionLauncher;
     private final ExecutorService imageExecutor = Executors.newSingleThreadExecutor();
 
     private ValueEventListener userListener;
@@ -83,6 +88,17 @@ public class ProfileFragment extends Fragment {
                 success -> {
                     if (success && cameraProfilePictureUri != null) {
                         uploadProfilePicture(cameraProfilePictureUri);
+                    }
+                });
+
+        // requests camera permission before launching the camera from the profile page
+        cameraPermissionLauncher = registerForActivityResult(
+                new ActivityResultContracts.RequestPermission(),
+                granted -> {
+                    if (granted) {
+                        openCamera();
+                    } else {
+                        Toast.makeText(getContext(), "Camera permission is required", Toast.LENGTH_SHORT).show();
                     }
                 });
     }
@@ -110,11 +126,13 @@ public class ProfileFragment extends Fragment {
         tvFriendsPreview = view.findViewById(R.id.tv_profile_friends_preview);
         Button btnSave = view.findViewById(R.id.btn_save_profile);
         btnChangeProfilePicture = view.findViewById(R.id.btn_change_profile_picture);
+        Button btnChangePassword = view.findViewById(R.id.btn_change_password);
         Button btnLogout = view.findViewById(R.id.btn_logout);
 
         tvEmail.setText(currentUser.getEmail());
         btnSave.setOnClickListener(v -> saveProfile());
         btnChangeProfilePicture.setOnClickListener(v -> showProfilePictureOptions());
+        btnChangePassword.setOnClickListener(v -> showChangePasswordDialog());
         btnLogout.setOnClickListener(v -> logout());
 
         listenToProfile();
@@ -132,7 +150,6 @@ public class ProfileFragment extends Fragment {
                 String email = snapshot.child("email").getValue(String.class);
                 String profilePictureUrl = snapshot.child("profilePictureUrl").getValue(String.class);
                 Double totalDrinks = snapshot.child("totalDrinks").getValue(Double.class);
-                Double totalVapes = snapshot.child("totalVapes").getValue(Double.class);
                 Double totalCigarettes = snapshot.child("totalCigarettes").getValue(Double.class);
 
                 if (!etDisplayName.hasFocus()) {
@@ -143,9 +160,8 @@ public class ProfileFragment extends Fragment {
                 loadProfilePicture(profilePictureUrl);
                 tvTotals.setText(String.format(
                         Locale.getDefault(),
-                        "Drinks: %.0f  |  Vapes: %.0f  |  Cigarettes: %.0f",
+                        "Drinks: %.0f  |  Cigarettes: %.0f",
                         totalDrinks != null ? totalDrinks : 0d,
-                        totalVapes != null ? totalVapes : 0d,
                         totalCigarettes != null ? totalCigarettes : 0d
                 ));
             }
@@ -227,7 +243,7 @@ public class ProfileFragment extends Fragment {
                 .setTitle("Profile picture")
                 .setItems(options, (dialog, which) -> {
                     if (which == 0) {
-                        openCamera();
+                        cameraPermissionLauncher.launch(Manifest.permission.CAMERA);
                     } else {
                         profilePicturePicker.launch("image/*");
                     }
@@ -244,11 +260,15 @@ public class ProfileFragment extends Fragment {
         }
 
         File imageFile = new File(imageDir, "profile_picture_" + System.currentTimeMillis() + ".jpg");
-        cameraProfilePictureUri = FileProvider.getUriForFile(
-                requireContext(),
-                requireContext().getPackageName() + ".fileprovider",
-                imageFile);
-        cameraPictureLauncher.launch(cameraProfilePictureUri);
+        try {
+            cameraProfilePictureUri = FileProvider.getUriForFile(
+                    requireContext(),
+                    requireContext().getPackageName() + ".fileprovider",
+                    imageFile);
+            cameraPictureLauncher.launch(cameraProfilePictureUri);
+        } catch (Exception e) {
+            Toast.makeText(getContext(), "Could not open camera: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
     }
 
     //uploads the replacement image and saves the new URL in auth and realtime database
@@ -334,6 +354,87 @@ public class ProfileFragment extends Fragment {
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);
         requireActivity().finish();
+    }
+
+    //shows a password change dialog and re authenticates before updating firebase auth
+    private void showChangePasswordDialog() {
+        View dialogView = LayoutInflater.from(requireContext())
+                .inflate(R.layout.dialog_change_password, null, false);
+
+        TextInputEditText etCurrentPassword = dialogView.findViewById(R.id.et_current_password);
+        TextInputEditText etNewPassword = dialogView.findViewById(R.id.et_new_password);
+        TextInputEditText etConfirmPassword = dialogView.findViewById(R.id.et_confirm_new_password);
+        TextInputLayout currentLayout = dialogView.findViewById(R.id.til_current_password);
+        TextInputLayout newLayout = dialogView.findViewById(R.id.til_new_password);
+        TextInputLayout confirmLayout = dialogView.findViewById(R.id.til_confirm_new_password);
+
+        AlertDialog dialog = new AlertDialog.Builder(requireContext())
+                .setTitle("Change password")
+                .setView(dialogView)
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Update", null)
+                .create();
+
+        dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            String currentPassword = etCurrentPassword.getText() != null
+                    ? etCurrentPassword.getText().toString()
+                    : "";
+            String newPassword = etNewPassword.getText() != null
+                    ? etNewPassword.getText().toString()
+                    : "";
+            String confirmPassword = etConfirmPassword.getText() != null
+                    ? etConfirmPassword.getText().toString()
+                    : "";
+
+            currentLayout.setError(null);
+            newLayout.setError(null);
+            confirmLayout.setError(null);
+
+            if (TextUtils.isEmpty(currentPassword)) {
+                currentLayout.setError("Current password is required");
+                return;
+            }
+            if (!isStrongPassword(newPassword)) {
+                newLayout.setError("Use 8+ chars with uppercase, lowercase and a number");
+                return;
+            }
+            if (!newPassword.equals(confirmPassword)) {
+                confirmLayout.setError("Passwords do not match");
+                return;
+            }
+
+            updatePassword(currentPassword, newPassword, dialog);
+        }));
+
+        dialog.show();
+    }
+
+    private boolean isStrongPassword(String password) {
+        return password.length() >= 8
+                && password.matches(".*[A-Z].*")
+                && password.matches(".*[a-z].*")
+                && password.matches(".*\\d.*");
+    }
+
+    private void updatePassword(String currentPassword, String newPassword, AlertDialog dialog) {
+        if (currentUser == null || currentUser.getEmail() == null) {
+            Toast.makeText(getContext(), "Could not update password", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        currentUser.reauthenticate(
+                        EmailAuthProvider.getCredential(currentUser.getEmail(), currentPassword))
+                .addOnSuccessListener(aVoid ->
+                        currentUser.updatePassword(newPassword)
+                                .addOnSuccessListener(updated -> {
+                                    dialog.dismiss();
+                                    Toast.makeText(getContext(), "Password updated", Toast.LENGTH_SHORT).show();
+                                })
+                                .addOnFailureListener(e ->
+                                        Toast.makeText(getContext(), "Failed to update password: " + e.getMessage(),
+                                                Toast.LENGTH_LONG).show()))
+                .addOnFailureListener(e ->
+                        Toast.makeText(getContext(), "Current password is incorrect", Toast.LENGTH_LONG).show());
     }
 
     //removes active Firebase listeners when the fragment view is destroyed
