@@ -13,6 +13,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.UserProfileChangeRequest;
 import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -37,7 +38,8 @@ public class SignUpActivity extends AppCompatActivity {
 
         // Initialise Firebase Auth and Realtime Database
         mAuth = FirebaseAuth.getInstance();
-        dbRef = FirebaseRefs.root().child("users");
+        FirebaseDatabase database = FirebaseDatabase.getInstance("https://mostpolluted-default-rtdb.europe-west1.firebasedatabase.app/");
+        dbRef = database.getReference("users");
 
         etDisplayName     = findViewById(R.id.et_display_name);
         etEmail           = findViewById(R.id.et_email);
@@ -103,6 +105,7 @@ public class SignUpActivity extends AppCompatActivity {
         user.put("displayName", displayName);
         user.put("email", email);
         user.put("totalDrinks", 0);
+        user.put("totalVapes", 0);
         user.put("totalCigarettes", 0);
         user.put("createdAt", System.currentTimeMillis());
 

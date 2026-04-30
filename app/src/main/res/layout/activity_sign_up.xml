@@ -65,18 +65,54 @@
                     android:text="Use your details below to get started"
                     android:textColor="@color/auth_text_secondary"
                     android:textSize="15sp" />
+
+                <!-- required profile picture preview. The camera or gallery selection updates this image -->
+                <ImageView
+                    android:id="@+id/iv_profile_picture"
+                    android:layout_width="112dp"
+                    android:layout_height="112dp"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_marginBottom="10dp"
+                    android:background="@drawable/auth_screen_background"
+                    android:contentDescription="Profile picture"
+                    android:padding="28dp"
+                    android:scaleType="centerCrop"
+                    android:src="@android:drawable/ic_menu_camera" />
+
+                <!-- opens the camera or gallery choice dialog in SignUpActivity -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_choose_profile_picture"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_horizontal"
+                    android:text="Choose profile picture"
+                    android:textAllCaps="false"
+                    app:backgroundTint="@color/auth_button"
+                    app:cornerRadius="18dp" />
+
+                <!-- shown only when the user tries to sign up without a profile picture -->
+                <TextView
+                    android:id="@+id/tv_profile_picture_error"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_marginTop="6dp"
+                    android:layout_marginBottom="14dp"
+                    android:textColor="@color/auth_button"
+                    android:textSize="13sp"
+                    android:visibility="gone" />
                 <!-- Display name input field -->
                 <com.google.android.material.textfield.TextInputLayout
                     style="@style/Widget.ZeroVelocity.AuthInputLayout"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="Display name">
+                    android:hint="Username">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/et_display_name"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:inputType="textPersonName"
+                        android:inputType="text"
                         android:textColor="@color/auth_text_primary"
                         android:textColorHint="@color/auth_text_secondary" />
                 </com.google.android.material.textfield.TextInputLayout>
@@ -96,12 +132,22 @@
                         android:textColor="@color/auth_text_primary"
                         android:textColorHint="@color/auth_text_secondary" />
                 </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- shows password requirements before the user starts typing -->
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:layout_marginBottom="6dp"
+                    android:text="Password must be 8+ characters with uppercase, lowercase and a number"
+                    android:textColor="@color/auth_text_secondary"
+                    android:textSize="13sp" />
+
                 <!-- Password input field -->
                 <com.google.android.material.textfield.TextInputLayout
                     style="@style/Widget.ZeroVelocity.AuthInputLayout"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="14dp"
                     android:hint="Password"
                     app:endIconMode="password_toggle">
 

@@ -3,6 +3,7 @@ package com.example.zerovelocity;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
@@ -25,15 +26,22 @@ public class LoginActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
 
-        mAuth = FirebaseAuth.getInstance();
-
         etEmail      = findViewById(R.id.et_email);
         etPassword   = findViewById(R.id.et_password);
         btnLogin     = findViewById(R.id.btn_login);
         tvGoToSignUp = findViewById(R.id.tv_go_to_sign_up);
 
-        //sign out any existing session so login is always prompted on app open
-        mAuth.signOut();
+        // Let the login screen draw before firebase auth starts its setup work
+        // this helps prevents the launch window from sitting on a black screen
+        btnLogin.setEnabled(false);
+        View root = findViewById(android.R.id.content);
+        root.post(() -> {
+            mAuth = FirebaseAuth.getInstance();
+
+            //sign out any existing session so login is always prompted on app open
+            mAuth.signOut();
+            btnLogin.setEnabled(true);
+        });
 
         btnLogin.setOnClickListener(v -> attemptLogin());
 
@@ -42,6 +50,13 @@ public class LoginActivity extends AppCompatActivity {
     }
     //method called when login button is pressed
     private void attemptLogin() {
+        // The button should stay disabled until this is ready but this guard
+        // prevents a crash if the user taps during startup
+        if (mAuth == null) {
+            Toast.makeText(this, "Login is still starting. Try again in a moment.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         String email    = etEmail.getText().toString().trim();
         String password = etPassword.getText().toString().trim();
 

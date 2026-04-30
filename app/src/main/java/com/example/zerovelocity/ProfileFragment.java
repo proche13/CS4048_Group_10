@@ -19,6 +19,7 @@ import com.google.firebase.auth.UserProfileChangeRequest;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
@@ -49,7 +50,9 @@ public class ProfileFragment extends Fragment {
             return view;
         }
 
-        rootRef = FirebaseRefs.root();
+        rootRef = FirebaseDatabase
+                .getInstance("https://mostpolluted-default-rtdb.europe-west1.firebasedatabase.app/")
+                .getReference();
 
         etDisplayName = view.findViewById(R.id.et_profile_display_name);
         tvEmail = view.findViewById(R.id.tv_profile_email);
@@ -75,6 +78,7 @@ public class ProfileFragment extends Fragment {
                 String displayName = snapshot.child("displayName").getValue(String.class);
                 String email = snapshot.child("email").getValue(String.class);
                 Double totalDrinks = snapshot.child("totalDrinks").getValue(Double.class);
+                Double totalVapes = snapshot.child("totalVapes").getValue(Double.class);
                 Double totalCigarettes = snapshot.child("totalCigarettes").getValue(Double.class);
 
                 if (!etDisplayName.hasFocus()) {
@@ -84,8 +88,9 @@ public class ProfileFragment extends Fragment {
                 tvEmail.setText(email != null ? email : currentUser.getEmail());
                 tvTotals.setText(String.format(
                         Locale.getDefault(),
-                        "Drinks: %.0f  |  Cigarettes: %.0f",
+                        "Drinks: %.0f  |  Vapes: %.0f  |  Cigarettes: %.0f",
                         totalDrinks != null ? totalDrinks : 0d,
+                        totalVapes != null ? totalVapes : 0d,
                         totalCigarettes != null ? totalCigarettes : 0d
                 ));
             }
