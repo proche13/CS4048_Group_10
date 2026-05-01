@@ -4,7 +4,7 @@
 
     <item
         android:id="@+id/action_friends"
-        android:icon="@android:drawable/ic_menu_add"
+        android:icon="@drawable/ic_nav_add"
         android:title="Friends"
         app:showAsAction="always" />
 

@@ -56,7 +56,7 @@ public class MainActivity extends AppCompatActivity {
         //load the feed fragment as the default screen only on a fresh launch.
         //Theme switches recreate this activity, and Android restores the current fragment.
         if (savedInstanceState == null) {
-            loadFragment(new FeedFragment());
+            loadFragment(FeedFragment.newInstance(false));
         }
 
         topBar.setOnMenuItemClickListener(item -> {
@@ -76,9 +76,9 @@ public class MainActivity extends AppCompatActivity {
 
             int id = item.getItemId();
             if (id == R.id.nav_feed) {
-                selected = new FeedFragment();
+                selected = FeedFragment.newInstance(false);
             } else if (id == R.id.nav_map) {
-                selected = new FriendsFragment();
+                selected = FeedFragment.newInstance(true);
             } else if (id == R.id.nav_log) {
                 selected = new LogDrinkFragment();
             } else if (id == R.id.nav_leaderboard) {

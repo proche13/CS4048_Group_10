@@ -48,6 +48,16 @@ import java.util.Map;
 
 public class FeedFragment extends Fragment implements OnMapReadyCallback {
 
+    private static final String ARG_START_IN_MAP_MODE = "start_in_map_mode";
+
+    public static FeedFragment newInstance(boolean startInMapMode) {
+        FeedFragment fragment = new FeedFragment();
+        Bundle args = new Bundle();
+        args.putBoolean(ARG_START_IN_MAP_MODE, startInMapMode);
+        fragment.setArguments(args);
+        return fragment;
+    }
+
     private RecyclerView rvFeed;
     private View mapContainer;
     private TextView tvLeader;
@@ -123,6 +133,11 @@ public class FeedFragment extends Fragment implements OnMapReadyCallback {
 
         listenToUserProfiles();
         loadFriendsAndThenLogs();
+
+        Bundle args = getArguments();
+        if (args != null && args.getBoolean(ARG_START_IN_MAP_MODE, false)) {
+            toggleMapMode();
+        }
 
         return view;
     }
