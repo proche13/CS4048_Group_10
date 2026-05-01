@@ -1,9 +1,6 @@
 package com.example.zerovelocity;
 
-import android.Manifest;
-import android.annotation.SuppressLint;
-import android.content.pm.PackageManager;
-import android.location.Location;
+import android.content.Context;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
@@ -12,27 +9,12 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.google.android.gms.maps.CameraUpdateFactory;
-import com.google.android.gms.maps.GoogleMap;
-import com.google.android.gms.maps.OnMapReadyCallback;
-import com.google.android.gms.maps.SupportMapFragment;
-import com.google.android.gms.location.FusedLocationProviderClient;
-import com.google.android.gms.location.LocationServices;
-import com.google.android.gms.location.Priority;
-import com.google.android.gms.maps.model.BitmapDescriptorFactory;
-import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.LatLngBounds;
-import com.google.android.gms.maps.model.MarkerOptions;
-import com.google.android.material.button.MaterialButton;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -46,33 +28,19 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
-public class FeedFragment extends Fragment implements OnMapReadyCallback, FeedAdapter.OnInteractionListener {
+public class FeedFragment extends Fragment implements FeedAdapter.OnInteractionListener {
 
-    private static final String ARG_START_IN_MAP_MODE = "start_in_map_mode";
-
-    public static FeedFragment newInstance(boolean startInMapMode) {
-        FeedFragment fragment = new FeedFragment();
-        Bundle args = new Bundle();
-        args.putBoolean(ARG_START_IN_MAP_MODE, startInMapMode);
-        fragment.setArguments(args);
-        return fragment;
-    }
+    private static final String FEED_PREFS = "feed_preferences";
+    private static final String KEY_LAST_SEEN_PREFIX = "last_seen_feed_";
 
     private RecyclerView rvFeed;
-    private View mapContainer;
     private TextView tvLeader;
-    private MaterialButton btnMapToggle;
+    private TextView tvFeedBadge;
     private FeedAdapter adapter;
 
     private DatabaseReference rootRef;
     private String myUid;
-    private GoogleMap googleMap;
-    private FusedLocationProviderClient fusedLocationClient;
     private String myDisplayName = "";
-    private boolean mapMode;
-    private boolean mapFragmentCreated;
-    private boolean hasCenteredMap;
-    private ActivityResultLauncher<String[]> mapLocationPermissionLauncher;
 
     private ValueEventListener friendsListener;
     private ValueEventListener logsListener;
@@ -86,25 +54,6 @@ public class FeedFragment extends Fragment implements OnMapReadyCallback, FeedAd
         // Required empty public constructor
     }
 
-    @Override
-    public void onCreate(@Nullable Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-
-        // The map can work without location permission but we need the permission to lets us zoom
-        // straight to the current user and show the blue current-location dot
-        mapLocationPermissionLauncher = registerForActivityResult(
-                new ActivityResultContracts.RequestMultiplePermissions(),
-                permissions -> {
-                    boolean granted = Boolean.TRUE.equals(permissions.get(Manifest.permission.ACCESS_FINE_LOCATION))
-                            || Boolean.TRUE.equals(permissions.get(Manifest.permission.ACCESS_COARSE_LOCATION));
-                    if (granted) {
-                        enableMyLocationAndCenter();
-                    } else {
-                        Toast.makeText(requireContext(), "Map location permission denied", Toast.LENGTH_SHORT).show();
-                    }
-                });
-    }
-
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater,
@@ -114,14 +63,12 @@ public class FeedFragment extends Fragment implements OnMapReadyCallback, FeedAd
         View view = inflater.inflate(R.layout.fragment_feed, container, false);
 
         rvFeed = view.findViewById(R.id.rv_feed);
-        mapContainer = view.findViewById(R.id.map_container);
         tvLeader = view.findViewById(R.id.tv_leader);
-        btnMapToggle = view.findViewById(R.id.btn_feed_map_toggle);
+        tvFeedBadge = view.findViewById(R.id.tv_feed_badge);
 
         rvFeed.setLayoutManager(new LinearLayoutManager(getContext()));
         adapter = new FeedAdapter(new ArrayList<>(), this);
         rvFeed.setAdapter(adapter);
-        btnMapToggle.setOnClickListener(v -> toggleMapMode());
 
         if (FirebaseAuth.getInstance().getCurrentUser() == null) {
             Toast.makeText(getContext(), "Not logged in", Toast.LENGTH_SHORT).show();
@@ -130,16 +77,10 @@ public class FeedFragment extends Fragment implements OnMapReadyCallback, FeedAd
 
         myUid = FirebaseAuth.getInstance().getCurrentUser().getUid();
         rootRef = FirebaseRefs.root();
-        fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity());
 
         listenToUserProfiles();
         loadFriendsAndThenLogs();
         loadMyDisplayName();
-
-        Bundle args = getArguments();
-        if (args != null && args.getBoolean(ARG_START_IN_MAP_MODE, false)) {
-            toggleMapMode();
-        }
 
         return view;
     }
@@ -258,7 +199,6 @@ public class FeedFragment extends Fragment implements OnMapReadyCallback, FeedAd
                         latestLogs.addAll(logs);
 
                         renderFeedList();
-                        renderMapMarkers();
                     }
 
                     @Override
@@ -275,10 +215,19 @@ public class FeedFragment extends Fragment implements OnMapReadyCallback, FeedAd
 
         Map<String, Float> totalsByUserId = new HashMap<>();
         Map<String, String> usernamesByUserId = new HashMap<>();
+        long latestFriendPostTimestamp = 0L;
+        int unseenFriendPostCount = 0;
+        long lastSeenFeedTimestamp = getLastSeenFeedTimestamp();
 
         for (LogItem log : latestLogs) {
             totalsByUserId.put(log.userId, totalsByUserId.getOrDefault(log.userId, 0f) + log.units);
             usernamesByUserId.put(log.userId, log.username);
+            if (!TextUtils.equals(log.userId, myUid)) {
+                latestFriendPostTimestamp = Math.max(latestFriendPostTimestamp, log.timestamp);
+                if (log.timestamp > lastSeenFeedTimestamp) {
+                    unseenFriendPostCount++;
+                }
+            }
         }
 
         Map<String, Integer> ranksByUserId = getTopThreeRanks(totalsByUserId);
@@ -327,154 +276,47 @@ public class FeedFragment extends Fragment implements OnMapReadyCallback, FeedAd
         } else {
             tvLeader.setText("Top user: None");
         }
-    }
 
-    private void toggleMapMode() {
-        mapMode = !mapMode;
-        rvFeed.setVisibility(mapMode ? View.GONE : View.VISIBLE);
-        mapContainer.setVisibility(mapMode ? View.VISIBLE : View.GONE);
-        btnMapToggle.setText(mapMode ? "Feed" : "Map");
-
-        if (mapMode && !mapFragmentCreated) {
-            mapFragmentCreated = true;
-            SupportMapFragment mapFragment = SupportMapFragment.newInstance();
-            getChildFragmentManager()
-                    .beginTransaction()
-                    .replace(R.id.map_container, mapFragment)
-                    .commit();
-            mapFragment.getMapAsync(this);
-        } else if (mapMode) {
-            requestMapLocationIfNeeded();
-            renderMapMarkers();
+        updateFeedBadge(unseenFriendPostCount);
+        if (latestFriendPostTimestamp > 0L) {
+            saveLastSeenFeedTimestamp(latestFriendPostTimestamp);
         }
     }
 
-    @Override
-    public void onMapReady(@NonNull GoogleMap map) {
-        googleMap = map;
-        googleMap.getUiSettings().setZoomControlsEnabled(true);
-        googleMap.getUiSettings().setMapToolbarEnabled(true);
-        requestMapLocationIfNeeded();
-        enableMyLocationAndCenter();
-        renderMapMarkers();
-    }
-
-    private void requestMapLocationIfNeeded() {
-        if (!hasLocationPermission()) {
-            mapLocationPermissionLauncher.launch(new String[]{
-                    Manifest.permission.ACCESS_FINE_LOCATION,
-                    Manifest.permission.ACCESS_COARSE_LOCATION
-            });
-        }
-    }
-
-    @SuppressLint("MissingPermission")
-    private void enableMyLocationAndCenter() {
-        if (googleMap == null || !hasLocationPermission()) {
+    private void updateFeedBadge(int unseenFriendPostCount) {
+        if (tvFeedBadge == null) {
             return;
         }
 
-        googleMap.setMyLocationEnabled(true);
-        googleMap.getUiSettings().setMyLocationButtonEnabled(true);
-
-        if (!hasCenteredMap) {
-            fusedLocationClient.getCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, null)
-                    .addOnSuccessListener(this::centerOnUserLocation)
-                    .addOnFailureListener(e -> fusedLocationClient.getLastLocation()
-                            .addOnSuccessListener(this::centerOnUserLocation));
-        }
-    }
-
-    private void centerOnUserLocation(Location location) {
-        if (googleMap == null || location == null || hasCenteredMap) {
+        if (unseenFriendPostCount <= 0) {
+            tvFeedBadge.setVisibility(View.GONE);
             return;
         }
 
-        hasCenteredMap = true;
-        LatLng currentPosition = new LatLng(location.getLatitude(), location.getLongitude());
-        googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(currentPosition, 15f));
+        tvFeedBadge.setVisibility(View.VISIBLE);
+        tvFeedBadge.setText(unseenFriendPostCount > 99 ? "99+" : String.valueOf(unseenFriendPostCount));
     }
 
-    private boolean hasLocationPermission() {
-        return ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION)
-                == PackageManager.PERMISSION_GRANTED
-                || ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_COARSE_LOCATION)
-                == PackageManager.PERMISSION_GRANTED;
+    private long getLastSeenFeedTimestamp() {
+        Context context = getContext();
+        if (context == null || TextUtils.isEmpty(myUid)) {
+            return 0L;
+        }
+
+        return context.getSharedPreferences(FEED_PREFS, Context.MODE_PRIVATE)
+                .getLong(KEY_LAST_SEEN_PREFIX + myUid, 0L);
     }
 
-    // Plots all friend/self feed logs that have coordinates saved from the log screen.
-    private void renderMapMarkers() {
-        if (googleMap == null) {
+    private void saveLastSeenFeedTimestamp(long timestamp) {
+        Context context = getContext();
+        if (context == null || TextUtils.isEmpty(myUid)) {
             return;
         }
 
-        googleMap.clear();
-        LatLngBounds.Builder boundsBuilder = new LatLngBounds.Builder();
-        Map<String, Integer> coordinateCounts = new HashMap<>();
-        int markerCount = 0;
-        LatLng firstPosition = null;
-
-        for (LogItem log : latestLogs) {
-            if (log.latitude == null || log.longitude == null) {
-                continue;
-            }
-
-            LatLng position = getOffsetPosition(log, coordinateCounts);
-            if (firstPosition == null) {
-                firstPosition = position;
-            }
-            String displayName = TextUtils.equals(log.userId, myUid) ? "You" : log.username;
-            String categoryText = log.category.toLowerCase();
-            String itemText = TextUtils.isEmpty(log.itemName) ? categoryText : log.itemName;
-            String locationText = TextUtils.isEmpty(log.locationLabel) ? "Logged from here" : log.locationLabel;
-            boolean isMyLog = TextUtils.equals(log.userId, myUid);
-            boolean isDrink = TextUtils.equals(log.category, LogEntry.Category.Drink.name());
-            float hue = getMarkerHue(isMyLog, isDrink);
-
-            googleMap.addMarker(new MarkerOptions()
-                    .position(position)
-                    .title(displayName + " logged " + log.units + " " + categoryText)
-                    .snippet(itemText + " - " + locationText)
-                    .icon(BitmapDescriptorFactory.defaultMarker(hue)));
-
-            boundsBuilder.include(position);
-            markerCount++;
-        }
-
-        if (markerCount == 1) {
-            hasCenteredMap = true;
-            googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(firstPosition, 14f));
-        } else if (markerCount > 1) {
-            hasCenteredMap = true;
-            googleMap.moveCamera(CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), 120));
-        } else {
-            enableMyLocationAndCenter();
-        }
-    }
-    //sets color for the marker based on the type and if you or a friend has made the log
-    private float getMarkerHue(boolean isMyLog, boolean isDrink) {
-        if (isMyLog) {
-            return isDrink ? BitmapDescriptorFactory.HUE_ORANGE : BitmapDescriptorFactory.HUE_RED;
-        }
-        return isDrink ? BitmapDescriptorFactory.HUE_GREEN : BitmapDescriptorFactory.HUE_BLUE;
-    }
-
-    //separates markers that have exactly the same coordinates so none are hidden behind another
-    private LatLng getOffsetPosition(LogItem log, Map<String, Integer> coordinateCounts) {
-        String key = String.format("%.6f,%.6f", log.latitude, log.longitude);
-        int index = coordinateCounts.getOrDefault(key, 0);
-        coordinateCounts.put(key, index + 1);
-
-        if (index == 0) {
-            return new LatLng(log.latitude, log.longitude);
-        }
-
-        int seed = Math.abs((log.userId + log.username + log.itemName + log.timestamp).hashCode());
-        double angle = (seed % 360) * Math.PI / 180.0;
-        double radius = 0.00004 + ((seed % 50) / 1000000.0);
-        double offsetLat = Math.cos(angle) * radius;
-        double offsetLng = Math.sin(angle) * radius;
-        return new LatLng(log.latitude + offsetLat, log.longitude + offsetLng);
+        context.getSharedPreferences(FEED_PREFS, Context.MODE_PRIVATE)
+                .edit()
+                .putLong(KEY_LAST_SEEN_PREFIX + myUid, timestamp)
+                .apply();
     }
 
     private Map<String, Integer> getTopThreeRanks(Map<String, Float> totalsByUserId) {
@@ -583,6 +425,5 @@ public class FeedFragment extends Fragment implements OnMapReadyCallback, FeedAd
         if (adapter != null) {
             adapter.shutdown();
         }
-        googleMap = null;
     }
 }
