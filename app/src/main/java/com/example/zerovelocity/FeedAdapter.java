@@ -75,6 +75,7 @@ public class FeedAdapter extends RecyclerView.Adapter<FeedAdapter.ViewHolder> {
         }
 
         bindDescription(holder, item);
+        bindRankBadge(holder, item.rank);
 
         int backgroundColor = R.color.auth_input_fill;
         int strokeColor = R.color.auth_card_stroke;
@@ -97,6 +98,26 @@ public class FeedAdapter extends RecyclerView.Adapter<FeedAdapter.ViewHolder> {
     @Override
     public int getItemCount() {
         return items.size();
+    }
+
+    private void bindRankBadge(ViewHolder holder, int rank) {
+        if (rank >= 1 && rank <= 3) {
+            holder.rank.setVisibility(View.VISIBLE);
+            holder.rank.setText(getRankLabel(rank));
+        } else {
+            holder.rank.setVisibility(View.GONE);
+        }
+    }
+
+    private String getRankLabel(int rank) {
+        if (rank == 1) {
+            return "1st";
+        } else if (rank == 2) {
+            return "2nd";
+        } else if (rank == 3) {
+            return "3rd";
+        }
+        return "";
     }
 
     private void bindDescription(ViewHolder holder, FeedItem item) {
@@ -228,6 +249,7 @@ public class FeedAdapter extends RecyclerView.Adapter<FeedAdapter.ViewHolder> {
         ImageView profileImage;
         ImageView logImage;
         LinearLayout descriptionRow;
+        TextView rank;
         TextView title;
         TextView details;
         TextView description;
@@ -239,6 +261,7 @@ public class FeedAdapter extends RecyclerView.Adapter<FeedAdapter.ViewHolder> {
             profileImage = itemView.findViewById(R.id.iv_feed_profile);
             logImage = itemView.findViewById(R.id.iv_feed_log_image);
             descriptionRow = itemView.findViewById(R.id.ll_feed_description);
+            rank = itemView.findViewById(R.id.tv_feed_rank);
             title = itemView.findViewById(R.id.tv_feed_title);
             details = itemView.findViewById(R.id.tv_feed_details);
             description = itemView.findViewById(R.id.tv_feed_description);
