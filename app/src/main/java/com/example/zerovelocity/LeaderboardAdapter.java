@@ -26,9 +26,14 @@ public class LeaderboardAdapter extends RecyclerView.Adapter<LeaderboardAdapter.
     }
 
     private final List<Entry> items;
+    private String quantityEmoji = "🍺";
 
     public LeaderboardAdapter(List<Entry> items) {
         this.items = items;
+    }
+
+    public void setQuantityEmoji(String quantityEmoji) {
+        this.quantityEmoji = quantityEmoji;
     }
 
     @NonNull
@@ -44,11 +49,15 @@ public class LeaderboardAdapter extends RecyclerView.Adapter<LeaderboardAdapter.
         Entry entry = items.get(position);
         holder.tvRank.setText(String.valueOf(entry.rank));
         holder.tvName.setText(entry.displayName);
-        holder.tvUnits.setText(String.format(Locale.getDefault(), "%.1f u", entry.totalUnits));
+        holder.tvUnits.setText(formatQuantity(entry.totalUnits, quantityEmoji));
         if (!entry.displayName.isEmpty()) {
             holder.tvInitial.setText(
                     String.valueOf(entry.displayName.charAt(0)).toUpperCase(Locale.getDefault()));
         }
+    }
+
+    static String formatQuantity(float totalUnits, String emoji) {
+        return String.format(Locale.getDefault(), "%d %s", Math.round(totalUnits), emoji);
     }
 
     @Override

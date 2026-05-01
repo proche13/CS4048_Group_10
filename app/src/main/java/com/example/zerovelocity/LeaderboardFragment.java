@@ -240,6 +240,7 @@ public class LeaderboardFragment extends Fragment {
             all.add(new LeaderboardAdapter.Entry(i + 1, name, sorted.get(i).getValue()));
         }
 
+        adapter.setQuantityEmoji(getQuantityEmoji());
         bindPodium(all);
 
         adapterEntries.clear();
@@ -274,11 +275,15 @@ public class LeaderboardFragment extends Fragment {
     private void bindSlot(LeaderboardAdapter.Entry e, TextView nameView,
                           TextView unitsView, TextView initialView) {
         nameView.setText(e.displayName);
-        unitsView.setText(String.format(Locale.getDefault(), "%.1f u", e.totalUnits));
+        unitsView.setText(LeaderboardAdapter.formatQuantity(e.totalUnits, getQuantityEmoji()));
         if (!e.displayName.isEmpty()) {
             initialView.setText(
                     String.valueOf(e.displayName.charAt(0)).toUpperCase(Locale.getDefault()));
         }
+    }
+
+    private String getQuantityEmoji() {
+        return activeCategory == LogEntry.Category.Cigarette ? "🚬" : "🍺";
     }
 
     @Override
