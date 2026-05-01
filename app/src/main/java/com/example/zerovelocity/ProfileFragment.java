@@ -166,7 +166,7 @@ public class ProfileFragment extends Fragment {
                         Locale.getDefault(),
                         "Drinks: %.0f  |  Cigarettes: %.0f",
                         totalDrinks != null ? totalDrinks : 0d,
-                        totalCigarettes != null ? totalCigarettes : 0d
+                        totalCigarettes != null ? totalCigarettes / 0.2d : 0d
                 ));
             }
 
@@ -310,21 +310,21 @@ public class ProfileFragment extends Fragment {
                     UserProfileChangeRequest request = new UserProfileChangeRequest.Builder()
                             .setPhotoUri(downloadUri)
                             .build();
-                    currentUser.updateProfile(request);
-
-                    rootRef.child("users")
-                            .child(currentUser.getUid())
-                            .child("profilePictureUrl")
-                            .setValue(downloadUri.toString())
-                            .addOnSuccessListener(unused -> {
-                                Toast.makeText(getContext(), "Profile picture updated", Toast.LENGTH_SHORT).show();
-                                if (getActivity() instanceof MainActivity) {
-                                    ((MainActivity) getActivity()).refreshProfileIcon();
-                                }
-                            })
-                            .addOnFailureListener(e ->
-                                    Toast.makeText(getContext(), "Image uploaded but profile was not saved",
-                                            Toast.LENGTH_LONG).show());
+                    currentUser.updateProfile(request)
+                            .addOnCompleteListener(profileTask ->
+                                    rootRef.child("users")
+                                            .child(currentUser.getUid())
+                                            .child("profilePictureUrl")
+                                            .setValue(downloadUri.toString())
+                                            .addOnSuccessListener(unused -> {
+                                                Toast.makeText(getContext(), "Profile picture updated", Toast.LENGTH_SHORT).show();
+                                                if (getActivity() instanceof MainActivity) {
+                                                    ((MainActivity) getActivity()).refreshProfileIcon(downloadUri.toString());
+                                                }
+                                            })
+                                            .addOnFailureListener(e ->
+                                                    Toast.makeText(getContext(), "Image uploaded but profile was not saved",
+                                                            Toast.LENGTH_LONG).show()));
                 })
                 .addOnFailureListener(e ->
                         Toast.makeText(getContext(), "Could not upload profile picture: " + e.getMessage(),

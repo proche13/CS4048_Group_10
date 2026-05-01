@@ -116,6 +116,14 @@ public class MainActivity extends AppCompatActivity {
                     }
                 });
     }
+    //method to refresh profile picture iin top right after profile pic change
+    public void refreshProfileIcon(String profilePictureUrl) {
+        if (!TextUtils.isEmpty(profilePictureUrl)) {
+            setProfileIconFromUrl(profilePictureUrl);
+        } else {
+            refreshProfileIcon();
+        }
+    }
 
     //downloads the profile image in the background and uses it as the toolbar menu icon
     private void setProfileIconFromUrl(String profilePictureUrl) {

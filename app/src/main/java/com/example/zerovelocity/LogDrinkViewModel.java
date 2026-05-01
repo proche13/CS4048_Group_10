@@ -25,7 +25,8 @@ public class LogDrinkViewModel extends ViewModel {
         return user != null ? user.getUid() : null;
     }
 
-    // Saves the log entry and records the item name as a suggestion for next time
+    // Saves the controlled log entry. Item suggestions are not saved because
+    // the form now uses fixed dropdown choices instead of free-text names.
     public void logEvent(LogEntry.Category category, String itemName, float units,
                          String description, String location,
                          Double latitude, Double longitude, String imageUrl) {
@@ -38,10 +39,6 @@ public class LogDrinkViewModel extends ViewModel {
 
         repo.logEvent(userID, username, category, itemName, units, description, location,
                 latitude, longitude, imageUrl);
-
-        if (!itemName.isEmpty()) {
-            repo.saveItemSuggestion(userID, category, itemName);
-        }
     }
 
     // Loads previously used item names for autocomplete suggestions

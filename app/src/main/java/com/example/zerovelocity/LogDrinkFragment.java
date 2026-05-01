@@ -6,6 +6,9 @@ import android.content.pm.PackageManager;
 import android.location.Location;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -34,8 +37,10 @@ import com.google.firebase.storage.StorageReference;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 // This fragment is the log entry screen.
 // The user picks a category (Drink or Cigarette), fills in the details
@@ -46,15 +51,14 @@ public class LogDrinkFragment extends Fragment {
 
     // UI views
     private MaterialButtonToggleGroup toggleCategory;
-    private TextInputLayout tilItemName, tilUnits;  // tilItemName label changes depending on category
-    private AutoCompleteTextView etItemName;         // shows past entries as suggestions while typing
+    private TextInputLayout tilDrinkType, tilItemName, tilSpiritMeasure, tilMixer, tilUnits;
+    private AutoCompleteTextView etDrinkType, etItemName, etSpiritMeasure, etMixer;
     private TextInputEditText etUnits, etLocation, etDescription;
     private ImageView ivPreview;                     // shows a preview of the selected photo
     private View llPhotoPlaceholder;                 // the camera icon shown before a photo is picked
     private MaterialButton btnLog;
 
     private LogDrinkViewModel viewModel;
-    private ArrayAdapter<String> suggestionAdapter;  // feeds past item names into the autocomplete field
     private FusedLocationProviderClient fusedLocationClient;
 
     // keeps track of which category the user currently has selected
@@ -117,9 +121,15 @@ public class LogDrinkFragment extends Fragment {
 
         // grab all the views from the layout
         toggleCategory     = view.findViewById(R.id.toggle_category);
+        tilDrinkType       = view.findViewById(R.id.til_drink_type);
         tilItemName        = view.findViewById(R.id.til_item_name);
+        tilSpiritMeasure   = view.findViewById(R.id.til_spirit_measure);
+        tilMixer           = view.findViewById(R.id.til_mixer);
         tilUnits           = view.findViewById(R.id.til_units);
+        etDrinkType        = view.findViewById(R.id.et_drink_type);
         etItemName         = view.findViewById(R.id.et_item_name);
+        etSpiritMeasure    = view.findViewById(R.id.et_spirit_measure);
+        etMixer            = view.findViewById(R.id.et_mixer);
         etUnits            = view.findViewById(R.id.et_units);
         etLocation         = view.findViewById(R.id.et_location);
         etDescription      = view.findViewById(R.id.et_description);
@@ -127,31 +137,16 @@ public class LogDrinkFragment extends Fragment {
         llPhotoPlaceholder = view.findViewById(R.id.ll_photo_placeholder);
         btnLog             = view.findViewById(R.id.btn_log);
 
-        // set up the autocomplete adapter with an empty list for now
-        // the list gets filled in when we load suggestions from Firebase below
-        suggestionAdapter = new ArrayAdapter<>(requireContext(),
-                android.R.layout.simple_dropdown_item_1line, new ArrayList<>());
-        etItemName.setAdapter(suggestionAdapter);
-
-        // set up the view model and start observing suggestions
-        // when the suggestions LiveData updates we swap out the adapter contents
         viewModel = new ViewModelProvider(this).get(LogDrinkViewModel.class);
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity());
-        viewModel.getSuggestions().observe(getViewLifecycleOwner(), items -> {
-            suggestionAdapter.clear();
-            suggestionAdapter.addAll(items);
-        });
+        setupControlledPickers();
 
-        // load suggestions for the default category (Drink) on first open
-        viewModel.loadSuggestions(currentCategory);
-
-        // when the user switches category we update the field hints and reload suggestions
+        // when the user switches category, the controlled fields are reset to valid options
         toggleCategory.addOnButtonCheckedListener((group, checkedId, isChecked) -> {
             if (!isChecked) return;
             if (checkedId == R.id.btn_log_drink)           currentCategory = LogEntry.Category.Drink;
             else if (checkedId == R.id.btn_log_cigarette)  currentCategory = LogEntry.Category.Cigarette;
             updateHintsForCategory();
-            viewModel.loadSuggestions(currentCategory);
         });
 
         // gallery button just fires off the gallery launcher
@@ -173,21 +168,122 @@ public class LogDrinkFragment extends Fragment {
         return view;
     }
 
-    // updates the field labels to match the selected category
-    // also clears the item name field since the old value is no longer relevant
+    // sets up fixed choices so users cannot type arbitrary item names or units
+    private void setupControlledPickers() {
+        setDropdown(etDrinkType, Arrays.asList("Beer", "Cider", "Stout", "Spirit"));
+        setDropdown(etSpiritMeasure, Arrays.asList("Single", "Double"));
+        setDropdown(etMixer, Arrays.asList(
+                "None", "Coca-Cola", "Diet Coke", "Coke Zero", "7UP", "Club Orange",
+                "MiWadi Blackcurrant", "MiWadi Orange", "Tonic Water", "Soda Water",
+                "Ginger Ale", "Red Bull", "Orange Juice", "Cranberry Juice"));
+
+        etDrinkType.setOnItemClickListener((parent, view, position, id) -> {
+            updateDrinkBrandOptions(etDrinkType.getText().toString());
+            updateCalculatedUnits();
+        });
+        etItemName.setOnItemClickListener((parent, view, position, id) -> updateCalculatedUnits());
+        etSpiritMeasure.setOnItemClickListener((parent, view, position, id) -> updateCalculatedUnits());
+
+        updateHintsForCategory();
+    }
+
+    private void setDropdown(AutoCompleteTextView view, List<String> values) {
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(
+                requireContext(), android.R.layout.simple_dropdown_item_1line, values);
+        view.setAdapter(adapter);
+        view.setOnClickListener(v -> view.showDropDown());
+        view.setOnFocusChangeListener((v, hasFocus) -> {
+            if (hasFocus) view.showDropDown();
+        });
+    }
+
+    // updates the visible fields to match drink vs cigarette logging
     private void updateHintsForCategory() {
+        clearPickerErrors();
         switch (currentCategory) {
             case Drink:
-                tilItemName.setHint("Drink Name");
-                tilUnits.setHint("Units (standard drinks)");
+                tilDrinkType.setVisibility(View.VISIBLE);
+                tilSpiritMeasure.setVisibility(isSpiritSelected() ? View.VISIBLE : View.GONE);
+                tilMixer.setVisibility(isSpiritSelected() ? View.VISIBLE : View.GONE);
+                tilUnits.setVisibility(View.GONE);
+                tilItemName.setHint("Drink");
+                tilUnits.setHint("Calculated drink units");
+                if (TextUtils.isEmpty(etDrinkType.getText())) {
+                    etItemName.setText("", false);
+                } else {
+                    updateDrinkBrandOptions(etDrinkType.getText().toString());
+                }
                 break;
             case Cigarette:
+                tilDrinkType.setVisibility(View.GONE);
+                tilSpiritMeasure.setVisibility(View.GONE);
+                tilMixer.setVisibility(View.GONE);
+                tilUnits.setVisibility(View.GONE);
                 tilItemName.setHint("Brand");
-                tilUnits.setHint("Number of cigarettes");
+                tilUnits.setHint("Cigarette units");
+                setDropdown(etItemName, Arrays.asList(
+                        "Marlboro Gold", "Marlboro Red", "Benson & Hedges Gold",
+                        "John Player Blue", "Silk Cut Blue", "Silk Cut Purple",
+                        "Camel Blue", "Mayfair", "L&M", "Amber Leaf"));
+                etItemName.setText("", false);
                 break;
         }
-        etItemName.setText("");
+        updateCalculatedUnits();
+    }
+
+    private void updateDrinkBrandOptions(String drinkType) {
+        List<String> drinks;
+        switch (drinkType) {
+            case "Cider":
+                drinks = Arrays.asList("Bulmers", "Orchard Thieves", "Kopparberg", "Magners", "Cronins");
+                break;
+            case "Stout":
+                drinks = Arrays.asList("Guinness", "Murphy's", "Beamish", "O'Hara's Irish Stout", "Island's Edge");
+                break;
+            case "Spirit":
+                drinks = Arrays.asList(
+                        "Jameson", "Powers", "Tullamore D.E.W.", "Smirnoff Vodka",
+                        "Gordon's Gin", "Captain Morgan", "Bacardi", "Baileys", "Hennessy");
+                break;
+            case "Beer":
+            default:
+                drinks = Arrays.asList(
+                        "Heineken", "Coors", "Rockshore", "Corona", "Budweiser",
+                        "Carlsberg", "Harp", "Smithwick's", "Birra Moretti", "Peroni");
+                break;
+        }
+
+        setDropdown(etItemName, drinks);
+        etItemName.setText("", false);
+        boolean spirit = "Spirit".equals(drinkType);
+        tilSpiritMeasure.setVisibility(spirit ? View.VISIBLE : View.GONE);
+        tilMixer.setVisibility(spirit ? View.VISIBLE : View.GONE);
+        etSpiritMeasure.setText(spirit ? "Single" : "", false);
+        etMixer.setText(spirit ? "None" : "", false);
+    }
+
+    private boolean isSpiritSelected() {
+        return "Spirit".equals(etDrinkType.getText().toString());
+    }
+
+    private void updateCalculatedUnits() {
+        if (currentCategory == LogEntry.Category.Cigarette) {
+            etUnits.setText("0.2");
+        } else if (isSpiritSelected()) {
+            etUnits.setText("Double".equals(etSpiritMeasure.getText().toString()) ? "2" : "1");
+        } else if (TextUtils.isEmpty(etDrinkType.getText())) {
+            etUnits.setText("");
+        } else {
+            etUnits.setText("1");
+        }
+    }
+
+    private void clearPickerErrors() {
+        tilDrinkType.setError(null);
         tilItemName.setError(null);
+        tilSpiritMeasure.setError(null);
+        tilMixer.setError(null);
+        tilUnits.setError(null);
     }
 
     // stores the chosen URI and swaps the placeholder out for the actual image preview
@@ -220,21 +316,22 @@ public class LogDrinkFragment extends Fragment {
     // then saves the log entry to the database once we have the download URL
     private void submit() {
         // read all the field values up front
-        String itemName    = etItemName.getText()    != null ? etItemName.getText().toString().trim()    : "";
+        String itemName    = buildLoggedItemName();
         String unitsStr    = etUnits.getText()       != null ? etUnits.getText().toString().trim()       : "";
         String location    = etLocation.getText()    != null ? etLocation.getText().toString().trim()    : "";
         String description = etDescription.getText() != null ? etDescription.getText().toString().trim() : "";
 
-        // item name is required, the hint text tells the user what to enter
-        if (itemName.isEmpty()) {
-            tilItemName.setError(tilItemName.getHint() + " is required");
+        if (!validateControlledChoices()) {
             return;
         }
-        tilItemName.setError(null);
 
-        // units field is required and must be a valid number
+        if (TextUtils.isEmpty(location)) {
+            etLocation.setError("Spot name is required");
+            return;
+        }
+
         if (unitsStr.isEmpty()) {
-            tilUnits.setError("Required");
+            tilUnits.setError("Calculated units missing");
             return;
         }
         float units;
@@ -291,6 +388,41 @@ public class LogDrinkFragment extends Fragment {
                         finalLocation, locationResult));
     }
 
+    private boolean validateControlledChoices() {
+        clearPickerErrors();
+        if (currentCategory == LogEntry.Category.Drink && TextUtils.isEmpty(etDrinkType.getText())) {
+            tilDrinkType.setError("Choose a drink type");
+            return false;
+        }
+        if (TextUtils.isEmpty(etItemName.getText())) {
+            tilItemName.setError(currentCategory == LogEntry.Category.Drink
+                    ? "Choose a drink" : "Choose a brand");
+            return false;
+        }
+        if (currentCategory == LogEntry.Category.Drink && isSpiritSelected()) {
+            if (TextUtils.isEmpty(etSpiritMeasure.getText())) {
+                tilSpiritMeasure.setError("Choose single or double");
+                return false;
+            }
+            if (TextUtils.isEmpty(etMixer.getText())) {
+                tilMixer.setError("Choose a mixer");
+                return false;
+            }
+        }
+        updateCalculatedUnits();
+        return true;
+    }
+
+    private String buildLoggedItemName() {
+        String item = etItemName.getText() != null ? etItemName.getText().toString().trim() : "";
+        if (currentCategory == LogEntry.Category.Drink && isSpiritSelected()) {
+            String measure = etSpiritMeasure.getText().toString();
+            String mixer = etMixer.getText().toString();
+            return measure + " " + item + ("None".equals(mixer) ? "" : " with " + mixer);
+        }
+        return item;
+    }
+
     @SuppressLint("MissingPermission")
     private void getCurrentLocation(OnLocationReady callback) {
         if (!hasLocationPermission()) {
@@ -298,9 +430,56 @@ public class LogDrinkFragment extends Fragment {
             return;
         }
 
-        fusedLocationClient.getCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, null)
-                .addOnSuccessListener(callback::onReady)
-                .addOnFailureListener(e -> callback.onReady(null));
+        AtomicBoolean completed = new AtomicBoolean(false);
+        Handler timeoutHandler = new Handler(Looper.getMainLooper());
+
+        Runnable timeout = () -> {
+            if (completed.compareAndSet(false, true)) {
+                Toast.makeText(requireContext(), "Location unavailable. Log saved without map pin.",
+                        Toast.LENGTH_LONG).show();
+                callback.onReady(null);
+            }
+        };
+        timeoutHandler.postDelayed(timeout, 5000);
+
+        // Last known location is usually instant. If it is missing, ask for a fresh fix.
+        fusedLocationClient.getLastLocation()
+                .addOnSuccessListener(lastLocation -> {
+                    if (lastLocation != null && completed.compareAndSet(false, true)) {
+                        timeoutHandler.removeCallbacks(timeout);
+                        callback.onReady(lastLocation);
+                    } else if (lastLocation == null) {
+                        requestFreshLocation(callback, completed, timeoutHandler, timeout);
+                    }
+                })
+                .addOnFailureListener(e ->
+                        requestFreshLocation(callback, completed, timeoutHandler, timeout));
+    }
+
+    @SuppressLint("MissingPermission")
+    private void requestFreshLocation(OnLocationReady callback, AtomicBoolean completed,
+                                      Handler timeoutHandler, Runnable timeout) {
+        fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null)
+                .addOnSuccessListener(location -> {
+                    if (completed.compareAndSet(false, true)) {
+                        timeoutHandler.removeCallbacks(timeout);
+                        if (location == null) {
+                            Toast.makeText(requireContext(),
+                                    "Location unavailable. Log saved without map pin.",
+                                    Toast.LENGTH_LONG).show();
+                        }
+                        callback.onReady(location);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    if (completed.compareAndSet(false, true)) {
+                        timeoutHandler.removeCallbacks(timeout);
+                        Toast.makeText(requireContext(),
+                                "Location unavailable. Log saved without map pin.",
+                                Toast.LENGTH_LONG).show();
+                        callback.onReady(null);
+                    }
+                });
     }
 
     private void uploadLogWithLocation(StorageReference storageRef, String itemName, float units,
@@ -349,11 +528,15 @@ public class LogDrinkFragment extends Fragment {
     private void clearForm() {
         etItemName.setText("");
         etUnits.setText("");
+        etDrinkType.setText("");
+        etSpiritMeasure.setText("");
+        etMixer.setText("");
         etLocation.setText("");
         etDescription.setText("");
         selectedImageUri = null;
         ivPreview.setVisibility(View.GONE);
         llPhotoPlaceholder.setVisibility(View.VISIBLE);
+        updateHintsForCategory();
         setBusy(false);
     }
 
