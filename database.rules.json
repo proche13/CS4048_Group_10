@@ -16,6 +16,15 @@
         }
       }
     },
+    "sentRequests": {
+      "$senderUid": {
+        ".read": "auth != null && auth.uid == $senderUid",
+        "$targetUid": {
+          ".write": "auth != null && (auth.uid == $senderUid || (auth.uid == $targetUid && !newData.exists()))",
+          ".validate": "newData.val() == null || newData.val() == true"
+        }
+      }
+    },
     "friends": {
       "$uid": {
         ".read": "auth != null && auth.uid == $uid",
@@ -29,7 +38,25 @@
       ".read": "auth != null",
       ".indexOn": ["userID", "timestamp"],
       "$eventId": {
-        ".write": "auth != null && newData.child('userID').val() == auth.uid"
+        ".write": "auth != null && ((newData.exists() && newData.child('userID').val() == auth.uid) || (!newData.exists() && data.child('userID').val() == auth.uid))",
+        "cheers": {
+          "$uid": {
+            ".write": "auth != null && auth.uid == $uid",
+            ".validate": "newData.val() == null || newData.val() == true"
+          }
+        },
+        "reactions": {
+          "$uid": {
+            ".write": "auth != null && auth.uid == $uid",
+            ".validate": "newData.val() == null || newData.isString()"
+          }
+        },
+        "comments": {
+          "$commentId": {
+            ".write": "auth != null && (newData.exists() ? newData.child('uid').val() == auth.uid : (data.child('uid').val() == auth.uid || data.parent().parent().child('userID').val() == auth.uid))",
+            ".validate": "newData.hasChildren(['uid', 'username', 'text', 'timestamp']) && newData.child('uid').val() == auth.uid && newData.child('text').isString() && newData.child('username').isString()"
+          }
+        }
       }
     },
     "Events": {

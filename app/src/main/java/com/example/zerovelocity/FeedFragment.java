@@ -46,7 +46,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
-public class FeedFragment extends Fragment implements OnMapReadyCallback {
+public class FeedFragment extends Fragment implements OnMapReadyCallback, FeedAdapter.OnInteractionListener {
 
     private static final String ARG_START_IN_MAP_MODE = "start_in_map_mode";
 
@@ -68,6 +68,7 @@ public class FeedFragment extends Fragment implements OnMapReadyCallback {
     private String myUid;
     private GoogleMap googleMap;
     private FusedLocationProviderClient fusedLocationClient;
+    private String myDisplayName = "";
     private boolean mapMode;
     private boolean mapFragmentCreated;
     private boolean hasCenteredMap;
@@ -118,7 +119,7 @@ public class FeedFragment extends Fragment implements OnMapReadyCallback {
         btnMapToggle = view.findViewById(R.id.btn_feed_map_toggle);
 
         rvFeed.setLayoutManager(new LinearLayoutManager(getContext()));
-        adapter = new FeedAdapter(new ArrayList<>());
+        adapter = new FeedAdapter(new ArrayList<>(), this);
         rvFeed.setAdapter(adapter);
         btnMapToggle.setOnClickListener(v -> toggleMapMode());
 
@@ -133,6 +134,7 @@ public class FeedFragment extends Fragment implements OnMapReadyCallback {
 
         listenToUserProfiles();
         loadFriendsAndThenLogs();
+        loadMyDisplayName();
 
         Bundle args = getArguments();
         if (args != null && args.getBoolean(ARG_START_IN_MAP_MODE, false)) {
@@ -219,8 +221,36 @@ public class FeedFragment extends Fragment implements OnMapReadyCallback {
 
                             float units = unitsValue != null ? unitsValue.floatValue() : 0f;
 
-                            logs.add(new LogItem(userId, username, category, itemName, locationLabel, description,
-                                    units, latitude, longitude, imageUrl, timestamp != null ? timestamp : 0L));
+                            // Read cheers
+                            int cheerCount = (int) child.child("cheers").getChildrenCount();
+                            boolean cheeredByMe = child.child("cheers").child(myUid).exists();
+
+                            // Read emoji reactions
+                            Map<String, Integer> reactionCounts = new HashMap<>();
+                            String myReaction = null;
+                            for (DataSnapshot r : child.child("reactions").getChildren()) {
+                                String emoji = r.getValue(String.class);
+                                if (emoji != null) {
+                                    reactionCounts.merge(emoji, 1, Integer::sum);
+                                    if (myUid.equals(r.getKey())) myReaction = emoji;
+                                }
+                            }
+
+                            // Read comments
+                            List<String[]> comments = new ArrayList<>();
+                            for (DataSnapshot c : child.child("comments").getChildren()) {
+                                String commenter = c.child("username").getValue(String.class);
+                                String commentText = c.child("text").getValue(String.class);
+                                if (commenter != null && commentText != null) {
+                                    comments.add(new String[]{commenter, commentText});
+                                }
+                            }
+
+                            logs.add(new LogItem(child.getKey(), userId, username, category,
+                                    itemName, locationLabel, description, units,
+                                    latitude, longitude, imageUrl, timestamp != null ? timestamp : 0L,
+                                    cheerCount, cheeredByMe, reactionCounts, myReaction,
+                                    comments, comments.size()));
                         }
 
                         Collections.sort(logs, (a, b) -> Long.compare(b.timestamp, a.timestamp));
@@ -261,12 +291,19 @@ public class FeedFragment extends Fragment implements OnMapReadyCallback {
             String itemText = TextUtils.isEmpty(log.itemName) ? categoryText : log.itemName;
             String locationText = TextUtils.isEmpty(log.locationLabel) ? "Unknown spot" : log.locationLabel;
             formattedFeed.add(new FeedAdapter.FeedItem(
+                    log.postId,
                     displayName + " logged " + log.units + " " + categoryText,
                     itemText + " at " + locationText,
                     log.description,
                     rank,
                     profilePictureUrlsByUserId.get(log.userId),
-                    log.imageUrl));
+                    log.imageUrl,
+                    log.cheerCount,
+                    log.cheeredByMe,
+                    log.reactionCounts,
+                    log.myReaction,
+                    log.comments,
+                    log.totalCommentCount));
         }
 
         adapter.update(formattedFeed);
@@ -452,6 +489,7 @@ public class FeedFragment extends Fragment implements OnMapReadyCallback {
     }
 
     static class LogItem {
+        String postId;
         String userId;
         String username;
         String category;
@@ -463,10 +501,19 @@ public class FeedFragment extends Fragment implements OnMapReadyCallback {
         Double longitude;
         String imageUrl;
         long timestamp;
+        int cheerCount;
+        boolean cheeredByMe;
+        Map<String, Integer> reactionCounts;
+        String myReaction;
+        List<String[]> comments;
+        int totalCommentCount;
 
-        LogItem(String userId, String username, String category, String itemName, String locationLabel,
-                String description,
-                float units, Double latitude, Double longitude, String imageUrl, long timestamp) {
+        LogItem(String postId, String userId, String username, String category, String itemName,
+                String locationLabel, String description, float units,
+                Double latitude, Double longitude, String imageUrl, long timestamp,
+                int cheerCount, boolean cheeredByMe, Map<String, Integer> reactionCounts,
+                String myReaction, List<String[]> comments, int totalCommentCount) {
+            this.postId = postId;
             this.userId = userId;
             this.username = username;
             this.category = category;
@@ -478,7 +525,47 @@ public class FeedFragment extends Fragment implements OnMapReadyCallback {
             this.longitude = longitude;
             this.imageUrl = imageUrl;
             this.timestamp = timestamp;
+            this.cheerCount = cheerCount;
+            this.cheeredByMe = cheeredByMe;
+            this.reactionCounts = reactionCounts;
+            this.myReaction = myReaction;
+            this.comments = comments;
+            this.totalCommentCount = totalCommentCount;
         }
+    }
+
+    private void loadMyDisplayName() {
+        rootRef.child("users").child(myUid).child("displayName").get()
+                .addOnSuccessListener(snapshot -> {
+                    String name = snapshot.getValue(String.class);
+                    if (!TextUtils.isEmpty(name)) myDisplayName = name;
+                });
+    }
+
+    @Override
+    public void onCheerToggle(String postId, boolean currentlyCheered) {
+        DatabaseReference cheerRef = rootRef.child("consumptionLogs")
+                .child(postId).child("cheers").child(myUid);
+        if (currentlyCheered) cheerRef.removeValue();
+        else cheerRef.setValue(true);
+    }
+
+    @Override
+    public void onEmojiReact(String postId, String emoji, String currentMyReaction) {
+        DatabaseReference reactionRef = rootRef.child("consumptionLogs")
+                .child(postId).child("reactions").child(myUid);
+        if (emoji.equals(currentMyReaction)) reactionRef.removeValue();
+        else reactionRef.setValue(emoji);
+    }
+
+    @Override
+    public void onCommentSubmit(String postId, String text) {
+        Map<String, Object> comment = new HashMap<>();
+        comment.put("uid", myUid);
+        comment.put("username", TextUtils.isEmpty(myDisplayName) ? "User" : myDisplayName);
+        comment.put("text", text);
+        comment.put("timestamp", System.currentTimeMillis());
+        rootRef.child("consumptionLogs").child(postId).child("comments").push().setValue(comment);
     }
 
     @Override
