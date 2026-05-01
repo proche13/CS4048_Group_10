@@ -72,7 +72,7 @@ public class LogRepo {
     private void incrementUserCounter(String userID, LogEntry.Category category, float units) {
         switch (category) {
             case Drink:
-                usersRef.child(userID).child("totalDrinkUnits")
+                usersRef.child(userID).child("totalDrinks")
                         .setValue(ServerValue.increment(units));
                 break;
             case Cigarette:
