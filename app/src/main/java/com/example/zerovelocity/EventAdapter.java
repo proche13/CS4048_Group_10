@@ -20,8 +20,10 @@ import com.google.firebase.database.ValueEventListener;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 public class EventAdapter extends RecyclerView.Adapter<EventAdapter.EventViewHolder> {
 
@@ -164,7 +166,10 @@ public class EventAdapter extends RecyclerView.Adapter<EventAdapter.EventViewHol
         DatabaseReference invitesRef = dbRef.child("Events").child(event.id).child("invites");
 
         for (String uid : friendUids) {
-            invitesRef.child(uid).setValue(true);
+            Map<String, Object> invite = new HashMap<>();
+            invite.put("status", "pending");
+            invite.put("canInvite", false);
+            invitesRef.child(uid).setValue(invite);
         }
 
         String msg = friendUids.size() == 1
