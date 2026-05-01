@@ -205,14 +205,14 @@ public class ProfileFragment extends Fragment {
         rootRef.child("friends").child(currentUser.getUid()).addValueEventListener(friendsListener);
     }
 
-    //builds a short comma separated preview of names for display on the profile page
+    //builds a short stacked preview of names for display on the profile page
     private String buildPreviewText(List<String> names, String emptyText) {
         if (names.isEmpty()) {
             return emptyText;
         }
 
         int limit = Math.min(names.size(), 5);
-        return TextUtils.join(", ", names.subList(0, limit));
+        return TextUtils.join("\n", names.subList(0, limit));
     }
 
     //saves an updated display name to both Firebase Auth and the users table
