@@ -2,6 +2,7 @@ package com.example.zerovelocity;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.app.AlertDialog;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -38,6 +39,7 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.material.button.MaterialButton;
 import com.google.firebase.auth.FirebaseAuth;
@@ -61,6 +63,7 @@ import java.util.concurrent.Executors;
 public class MapFragment extends Fragment implements OnMapReadyCallback {
 
     private static final double CLUSTER_STEP = 0.00035d;
+    private static final float INDIVIDUAL_MARKER_ZOOM_THRESHOLD = 16f;
     private static final int DEFAULT_PIN_PHOTO_DIAMETER_DP = 50;
 
     private GoogleMap googleMap;
@@ -260,6 +263,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         googleMap = map;
         googleMap.getUiSettings().setZoomControlsEnabled(true);
         googleMap.getUiSettings().setMapToolbarEnabled(true);
+        googleMap.setOnCameraIdleListener(this::renderMapMarkers);
+        googleMap.setOnMarkerClickListener(this::handleMarkerClick);
         requestMapLocationIfNeeded();
         enableMyLocationAndCenter();
         renderMapMarkers();
@@ -325,7 +330,10 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             return;
         }
 
-        List<MapCluster> clusters = buildClusters(latestDrinkLogs);
+        float zoom = googleMap.getCameraPosition() != null
+                ? googleMap.getCameraPosition().zoom
+                : 0f;
+        List<MapCluster> clusters = buildClusters(latestDrinkLogs, zoom);
         LatLngBounds.Builder boundsBuilder = new LatLngBounds.Builder();
         int markerCount = 0;
         LatLng firstPosition = null;
@@ -336,11 +344,14 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 firstPosition = position;
             }
 
-            googleMap.addMarker(new MarkerOptions()
+            Marker marker = googleMap.addMarker(new MarkerOptions()
                     .position(position)
                     .title(cluster.getTitle(myUid))
                     .snippet(cluster.getSnippet())
-                    .icon(BitmapDescriptorFactory.fromBitmap(buildPinBitmap(cluster))));
+                    .icon(BitmapDescriptorFactory.fromBitmap(buildMarkerBitmap(cluster))));
+            if (marker != null) {
+                marker.setTag(cluster);
+            }
 
             boundsBuilder.include(position);
             markerCount++;
@@ -375,11 +386,31 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         });
     }
 
-    private List<MapCluster> buildClusters(List<MapLogItem> logs) {
+    private List<MapCluster> buildClusters(List<MapLogItem> logs, float zoom) {
+        if (zoom >= INDIVIDUAL_MARKER_ZOOM_THRESHOLD) {
+            Map<String, MapCluster> exactLocationClusters = new LinkedHashMap<>();
+            for (MapLogItem log : logs) {
+                String key = getExactLocationKey(log.latitude, log.longitude);
+                MapCluster cluster = exactLocationClusters.get(key);
+                if (cluster == null) {
+                    cluster = new MapCluster();
+                    exactLocationClusters.put(key, cluster);
+                }
+                cluster.add(log);
+            }
+            for (MapCluster cluster : exactLocationClusters.values()) {
+                if (cluster.logs.size() > 1) {
+                    cluster.setLocationSummary(true);
+                }
+            }
+            return new ArrayList<>(exactLocationClusters.values());
+        }
+
         Map<String, MapCluster> clusters = new LinkedHashMap<>();
+        double clusterStep = getClusterStepForZoom(zoom);
 
         for (MapLogItem log : logs) {
-            String key = getClusterKey(log.latitude, log.longitude);
+            String key = getClusterKey(log.latitude, log.longitude, clusterStep);
             MapCluster cluster = clusters.get(key);
             if (cluster == null) {
                 cluster = new MapCluster();
@@ -391,10 +422,30 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         return new ArrayList<>(clusters.values());
     }
 
-    private String getClusterKey(double latitude, double longitude) {
-        long latBucket = Math.round(latitude / CLUSTER_STEP);
-        long lngBucket = Math.round(longitude / CLUSTER_STEP);
+    private double getClusterStepForZoom(float zoom) {
+        if (zoom <= 0f) {
+            return CLUSTER_STEP;
+        }
+
+        double zoomFactor = Math.pow(2d, Math.max(0d, zoom - 14d));
+        return Math.max(CLUSTER_STEP / zoomFactor, CLUSTER_STEP / 8d);
+    }
+
+    private String getClusterKey(double latitude, double longitude, double clusterStep) {
+        long latBucket = Math.round(latitude / clusterStep);
+        long lngBucket = Math.round(longitude / clusterStep);
         return latBucket + ":" + lngBucket;
+    }
+
+    private String getExactLocationKey(double latitude, double longitude) {
+        return Double.doubleToLongBits(latitude) + ":" + Double.doubleToLongBits(longitude);
+    }
+
+    private Bitmap buildMarkerBitmap(MapCluster cluster) {
+        if (cluster.isLocationSummary()) {
+            return buildLocationSummaryBitmap(cluster);
+        }
+        return buildPinBitmap(cluster);
     }
 
     private Bitmap buildPinBitmap(MapCluster cluster) {
@@ -448,6 +499,73 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         }
 
         return output;
+    }
+
+    private Bitmap buildLocationSummaryBitmap(MapCluster cluster) {
+        int canvasWidth = dpToPx(80);
+        int canvasHeight = dpToPx(80);
+        int circleDiameter = dpToPx(56);
+        int centerX = canvasWidth / 2;
+        int centerY = canvasHeight / 2;
+        int radius = circleDiameter / 2;
+
+        Bitmap output = Bitmap.createBitmap(canvasWidth, canvasHeight, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(output);
+        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+
+        paint.setColor(Color.WHITE);
+        paint.setStyle(Paint.Style.FILL);
+        canvas.drawCircle(centerX, centerY, radius, paint);
+
+        paint.setStyle(Paint.Style.STROKE);
+        paint.setStrokeWidth(dpToPx(3));
+        paint.setColor(Color.parseColor("#111111"));
+        canvas.drawCircle(centerX, centerY, radius - dpToPx(1), paint);
+
+        int dotRadius = dpToPx(4);
+        int dotSpacing = dpToPx(11);
+        paint.setStyle(Paint.Style.FILL);
+        paint.setColor(Color.parseColor("#111111"));
+        canvas.drawCircle(centerX - dotSpacing, centerY, dotRadius, paint);
+        canvas.drawCircle(centerX, centerY, dotRadius, paint);
+        canvas.drawCircle(centerX + dotSpacing, centerY, dotRadius, paint);
+
+        drawCountBadge(canvas, cluster.logs.size(), canvasWidth - dpToPx(18), dpToPx(18));
+        return output;
+    }
+
+    private boolean handleMarkerClick(Marker marker) {
+        Object tag = marker.getTag();
+        if (!(tag instanceof MapCluster)) {
+            return false;
+        }
+
+        MapCluster cluster = (MapCluster) tag;
+        if (!cluster.isLocationSummary()) {
+            return false;
+        }
+
+        showLocationLogsDialog(cluster);
+        return true;
+    }
+
+    private void showLocationLogsDialog(MapCluster cluster) {
+        if (!isAdded()) {
+            return;
+        }
+
+        String[] items = new String[cluster.logs.size()];
+        for (int i = 0; i < cluster.logs.size(); i++) {
+            MapLogItem log = cluster.logs.get(i);
+            String name = TextUtils.equals(log.userId, myUid) ? "You" : log.username;
+            items[i] = name + " drank " + log.itemName + " at " + log.locationLabel + " (" + log.units + " units)";
+        }
+
+        new AlertDialog.Builder(requireContext())
+                .setTitle(cluster.logs.size() + " drinks at " + cluster.getPrimaryLocation())
+                .setItems(items, null)
+                .setPositiveButton("Close", null)
+                .show();
     }
 
     private void drawCountBadge(Canvas canvas, int count, int centerX, int centerY) {
@@ -594,6 +712,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         private MapLogItem representative;
         private double latitudeSum;
         private double longitudeSum;
+        private boolean locationSummary;
 
         void add(MapLogItem log) {
             logs.add(log);
@@ -608,6 +727,14 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             return new LatLng(latitudeSum / logs.size(), longitudeSum / logs.size());
         }
 
+        void setLocationSummary(boolean locationSummary) {
+            this.locationSummary = locationSummary;
+        }
+
+        boolean isLocationSummary() {
+            return locationSummary;
+        }
+
         String getTitle(String myUid) {
             if (logs.size() == 1 && representative != null) {
                 String name = TextUtils.equals(representative.userId, myUid) ? "You" : representative.username;
@@ -617,6 +744,9 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         }
 
         String getSnippet() {
+            if (locationSummary) {
+                return "Tap to view all drinks from this location";
+            }
             if (logs.size() == 1 && representative != null) {
                 return representative.locationLabel + " - " + representative.units + " units";
             }
