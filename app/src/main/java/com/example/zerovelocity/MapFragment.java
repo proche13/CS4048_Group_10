@@ -3,6 +3,7 @@ package com.example.zerovelocity;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
+import android.content.Context;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -19,6 +20,9 @@ import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -554,18 +558,90 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             return;
         }
 
-        String[] items = new String[cluster.logs.size()];
-        for (int i = 0; i < cluster.logs.size(); i++) {
-            MapLogItem log = cluster.logs.get(i);
-            String name = TextUtils.equals(log.userId, myUid) ? "You" : log.username;
-            items[i] = name + " drank " + log.itemName + " at " + log.locationLabel + " (" + log.units + " units)";
-        }
-
         new AlertDialog.Builder(requireContext())
-                .setTitle(cluster.logs.size() + " drinks at " + cluster.getPrimaryLocation())
-                .setItems(items, null)
+                .setTitle("pollution logged at this location")
+                .setView(buildLocationLogsDialogView(cluster))
                 .setPositiveButton("Close", null)
                 .show();
+    }
+
+    private View buildLocationLogsDialogView(MapCluster cluster) {
+        Context context = requireContext();
+
+        ScrollView scrollView = new ScrollView(context);
+        scrollView.setFillViewport(true);
+
+        LinearLayout container = new LinearLayout(context);
+        container.setOrientation(LinearLayout.VERTICAL);
+        int horizontalPadding = dpToPx(8);
+        int verticalPadding = dpToPx(4);
+        container.setPadding(horizontalPadding, verticalPadding, horizontalPadding, verticalPadding);
+
+        for (int i = 0; i < cluster.logs.size(); i++) {
+            if (i > 0) {
+                View divider = new View(context);
+                LinearLayout.LayoutParams dividerParams = new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        dpToPx(1)
+                );
+                dividerParams.topMargin = dpToPx(6);
+                dividerParams.bottomMargin = dpToPx(6);
+                divider.setLayoutParams(dividerParams);
+                divider.setBackgroundColor(Color.parseColor("#D7D7D7"));
+                container.addView(divider);
+            }
+
+            container.addView(buildLocationLogRow(cluster.logs.get(i)));
+        }
+
+        scrollView.addView(container, new ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+        ));
+        return scrollView;
+    }
+
+    private View buildLocationLogRow(MapLogItem log) {
+        Context context = requireContext();
+
+        LinearLayout row = new LinearLayout(context);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setPadding(dpToPx(4), dpToPx(8), dpToPx(4), dpToPx(8));
+        row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+
+        ImageView imageView = new ImageView(context);
+        LinearLayout.LayoutParams imageParams = new LinearLayout.LayoutParams(dpToPx(42), dpToPx(42));
+        imageParams.rightMargin = dpToPx(12);
+        imageView.setLayoutParams(imageParams);
+        imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        imageView.setImageBitmap(getProfileBitmap(log.userId));
+        row.addView(imageView);
+
+        LinearLayout textContainer = new LinearLayout(context);
+        textContainer.setOrientation(LinearLayout.VERTICAL);
+        textContainer.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        textContainer.setLayoutParams(new LinearLayout.LayoutParams(
+                0,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                1f
+        ));
+
+        TextView nameView = new TextView(context);
+        nameView.setText(TextUtils.equals(log.userId, myUid) ? "You" : log.username);
+        nameView.setTextColor(Color.parseColor("#111111"));
+        nameView.setTextSize(16);
+        nameView.setTypeface(nameView.getTypeface(), android.graphics.Typeface.BOLD);
+        textContainer.addView(nameView);
+
+        TextView drinkView = new TextView(context);
+        drinkView.setText(log.itemName);
+        drinkView.setTextColor(Color.parseColor("#444444"));
+        drinkView.setTextSize(15);
+        drinkView.setPadding(0, dpToPx(2), 0, 0);
+        textContainer.addView(drinkView);
+
+        row.addView(textContainer);
+        return row;
     }
 
     private void drawCountBadge(Canvas canvas, int count, int centerX, int centerY) {
