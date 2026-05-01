@@ -313,6 +313,7 @@ public class FeedFragment extends Fragment implements OnMapReadyCallback {
 
         googleMap.clear();
         LatLngBounds.Builder boundsBuilder = new LatLngBounds.Builder();
+        Map<String, Integer> coordinateCounts = new HashMap<>();
         int markerCount = 0;
         LatLng firstPosition = null;
 
@@ -321,7 +322,7 @@ public class FeedFragment extends Fragment implements OnMapReadyCallback {
                 continue;
             }
 
-            LatLng position = new LatLng(log.latitude, log.longitude);
+            LatLng position = getOffsetPosition(log, coordinateCounts);
             if (firstPosition == null) {
                 firstPosition = position;
             }
@@ -352,6 +353,24 @@ public class FeedFragment extends Fragment implements OnMapReadyCallback {
         } else {
             enableMyLocationAndCenter();
         }
+    }
+
+    //separates markers that have exactly the same coordinates so none are hidden behind another
+    private LatLng getOffsetPosition(LogItem log, Map<String, Integer> coordinateCounts) {
+        String key = String.format("%.6f,%.6f", log.latitude, log.longitude);
+        int index = coordinateCounts.getOrDefault(key, 0);
+        coordinateCounts.put(key, index + 1);
+
+        if (index == 0) {
+            return new LatLng(log.latitude, log.longitude);
+        }
+
+        int seed = Math.abs((log.userId + log.username + log.itemName + log.timestamp).hashCode());
+        double angle = (seed % 360) * Math.PI / 180.0;
+        double radius = 0.00004 + ((seed % 50) / 1000000.0);
+        double offsetLat = Math.cos(angle) * radius;
+        double offsetLng = Math.sin(angle) * radius;
+        return new LatLng(log.latitude + offsetLat, log.longitude + offsetLng);
     }
 
     private Map<String, Integer> getTopThreeRanks(Map<String, Float> totalsByUserId) {

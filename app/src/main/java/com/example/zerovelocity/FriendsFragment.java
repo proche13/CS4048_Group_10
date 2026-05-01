@@ -324,6 +324,11 @@ public class FriendsFragment extends Fragment {
         Map<String, Object> updates = new HashMap<>();
         updates.put("friends/" + myUid + "/" + user.uid, null);
         updates.put("friends/" + user.uid + "/" + myUid, null);
+        //clear any stale request records in both directions so the user can be re added cleanly
+        updates.put("friendRequests/" + myUid + "/" + user.uid, null);
+        updates.put("friendRequests/" + user.uid + "/" + myUid, null);
+        updates.put("sentRequests/" + myUid + "/" + user.uid, null);
+        updates.put("sentRequests/" + user.uid + "/" + myUid, null);
 
         dbRef.updateChildren(updates)
                 .addOnSuccessListener(aVoid -> {
