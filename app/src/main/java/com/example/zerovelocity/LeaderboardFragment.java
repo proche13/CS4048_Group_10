@@ -20,9 +20,12 @@ import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.Query;
 import com.google.firebase.database.ValueEventListener;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -30,7 +33,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
-// Leaderboard screen - global or friends-only ranking by total units logged
+// Leaderboard screen global or friends only ranking for the current week
 public class LeaderboardFragment extends Fragment {
 
     private LeaderboardAdapter adapter;
@@ -44,6 +47,7 @@ public class LeaderboardFragment extends Fragment {
     private LinearLayout podium2, podium3;
 
     private DatabaseReference logsRef, friendsRef;
+    private Query weeklyLogsQuery;
     private ValueEventListener logsListener, friendsListener;
 
     // Maps keyed by uid — one per category
@@ -55,6 +59,9 @@ public class LeaderboardFragment extends Fragment {
     private String myUid;
     private boolean friendsModeActive   = false;
     private LogEntry.Category activeCategory = LogEntry.Category.Drink;
+    private long weekStartMillis;
+    private long weekEndMillis;
+    private String weeklyRangeLabel;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -63,7 +70,9 @@ public class LeaderboardFragment extends Fragment {
         FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
         if (currentUser != null) myUid = currentUser.getUid();
 
+        calculateCurrentWeekRange();
         tvSubtitle = view.findViewById(R.id.tv_subtitle);
+        updateSubtitle();
 
         // Podium views
         podiumCard = view.findViewById(R.id.podium_card);
@@ -109,8 +118,11 @@ public class LeaderboardFragment extends Fragment {
 
         DatabaseReference dbRef = FirebaseRefs.root();
 
-        // Listen to consumption logs
+        // Listen only to logs from the current week so the leaderboard resets every Monday
         logsRef = dbRef.child("consumptionLogs");
+        weeklyLogsQuery = logsRef.orderByChild("timestamp")
+                .startAt(weekStartMillis)
+                .endAt(weekEndMillis - 1);
         logsListener = new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
@@ -122,7 +134,9 @@ public class LeaderboardFragment extends Fragment {
                     String username = log.child("username").getValue(String.class);
                     String category = log.child("category").getValue(String.class);
                     Float units     = log.child("units").getValue(Float.class);
-                    if (uid == null || units == null || category == null) continue;
+                    Long timestamp  = log.child("timestamp").getValue(Long.class);
+                    if (uid == null || units == null || category == null || timestamp == null) continue;
+                    if (timestamp < weekStartMillis || timestamp >= weekEndMillis) continue;
                     if (username != null) nameByUser.put(uid, username);
                     switch (category) {
                         case "Drink":
@@ -142,7 +156,7 @@ public class LeaderboardFragment extends Fragment {
                     Toast.makeText(getContext(), "Failed to load leaderboard", Toast.LENGTH_SHORT).show();
             }
         };
-        logsRef.addValueEventListener(logsListener);
+        weeklyLogsQuery.addValueEventListener(logsListener);
 
         // Listen to current user's friends list for the friends filter
         if (myUid != null) {
@@ -169,10 +183,36 @@ public class LeaderboardFragment extends Fragment {
 
     private void updateSubtitle() {
         if (tvSubtitle == null) return;
+        String metric;
         switch (activeCategory) {
-            case Drink:      tvSubtitle.setText("Ranked by standard drinks");   break;
-            case Cigarette:  tvSubtitle.setText("Ranked by cigarettes smoked"); break;
+            case Cigarette:
+                metric = "This week's cigarettes smoked";
+                break;
+            case Drink:
+            default:
+                metric = "This week's standard drinks";
+                break;
         }
+        tvSubtitle.setText(metric + "\nResets Monday at 00:00 - " + weeklyRangeLabel);
+    }
+
+    private void calculateCurrentWeekRange() {
+        Calendar start = Calendar.getInstance();
+        start.setFirstDayOfWeek(Calendar.MONDAY);
+        start.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY);
+        start.set(Calendar.HOUR_OF_DAY, 0);
+        start.set(Calendar.MINUTE, 0);
+        start.set(Calendar.SECOND, 0);
+        start.set(Calendar.MILLISECOND, 0);
+
+        Calendar end = (Calendar) start.clone();
+        end.add(Calendar.WEEK_OF_YEAR, 1);
+
+        weekStartMillis = start.getTimeInMillis();
+        weekEndMillis = end.getTimeInMillis();
+
+        SimpleDateFormat format = new SimpleDateFormat("EEE d MMM", Locale.getDefault());
+        weeklyRangeLabel = format.format(start.getTime()) + " to " + format.format(end.getTime());
     }
 
     // Rebuilds the sorted list based on the current mode and active category
@@ -244,7 +284,7 @@ public class LeaderboardFragment extends Fragment {
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-        if (logsRef != null && logsListener != null) logsRef.removeEventListener(logsListener);
+        if (weeklyLogsQuery != null && logsListener != null) weeklyLogsQuery.removeEventListener(logsListener);
         if (friendsRef != null && friendsListener != null) friendsRef.removeEventListener(friendsListener);
     }
 }
