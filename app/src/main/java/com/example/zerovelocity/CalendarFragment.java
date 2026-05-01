@@ -18,6 +18,8 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -63,6 +65,11 @@ public class CalendarFragment extends Fragment {
         tvSelectedDate.setText("Events for: " + DATE_FORMAT.format(new Date(selectedDate)));
 
         adapter = new EventAdapter();
+        // Pass the current user's UID so the adapter can load their friends for invites
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        if (currentUser != null) {
+            adapter.setCurrentUid(currentUser.getUid());
+        }
         recycler.setLayoutManager(new LinearLayoutManager(getContext()));
         recycler.setAdapter(adapter);
 
