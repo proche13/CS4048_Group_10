@@ -413,41 +413,70 @@ public class ProfileFragment extends Fragment {
                         rootRef.child("friends").child(uid).get()
                                 .addOnSuccessListener(friendsSnapshot ->
                                         rootRef.child("friendRequests").child(uid).get()
-                                                .addOnSuccessListener(requestsSnapshot -> {
-                                                    Map<String, Object> updates = new HashMap<>();
-                                                    updates.put("users/" + uid, null);
-                                                    updates.put("friendRequests/" + uid, null);
+                                                .addOnSuccessListener(requestsSnapshot ->
+                                                        rootRef.child("sentRequests").child(uid).get()
+                                                                .addOnSuccessListener(sentRequestsSnapshot ->
+                                                                        rootRef.child("Events").get()
+                                                                                .addOnSuccessListener(eventsSnapshot -> {
+                                                                                    Map<String, Object> updates = new HashMap<>();
+                                                                                    updates.put("users/" + uid, null);
 
-                                                    for (DataSnapshot log : logSnapshot.getChildren()) {
-                                                        updates.put("consumptionLogs/" + log.getKey(), null);
-                                                    }
+                                                                                    for (DataSnapshot log : logSnapshot.getChildren()) {
+                                                                                        updates.put("consumptionLogs/" + log.getKey(), null);
+                                                                                    }
 
-                                                    for (DataSnapshot friend : friendsSnapshot.getChildren()) {
-                                                        String friendUid = friend.getKey();
-                                                        if (!TextUtils.isEmpty(friendUid)) {
-                                                            // Delete both sides one child at a time so the write matches the rules.
-                                                            updates.put("friends/" + uid + "/" + friendUid, null);
-                                                            updates.put("friends/" + friendUid + "/" + uid, null);
-                                                        }
-                                                    }
+                                                                                    for (DataSnapshot friend : friendsSnapshot.getChildren()) {
+                                                                                        String friendUid = friend.getKey();
+                                                                                        if (!TextUtils.isEmpty(friendUid)) {
+                                                                                            // Delete both sides one child at a time so the write matches the rules.
+                                                                                            updates.put("friends/" + uid + "/" + friendUid, null);
+                                                                                            updates.put("friends/" + friendUid + "/" + uid, null);
+                                                                                        }
+                                                                                    }
 
-                                                    for (DataSnapshot request : requestsSnapshot.getChildren()) {
-                                                        String senderUid = request.getKey();
-                                                        if (!TextUtils.isEmpty(senderUid)) {
-                                                            updates.put("friendRequests/" + senderUid + "/" + uid, null);
-                                                        }
-                                                    }
+                                                                                    for (DataSnapshot request : requestsSnapshot.getChildren()) {
+                                                                                        String senderUid = request.getKey();
+                                                                                        if (!TextUtils.isEmpty(senderUid)) {
+                                                                                            //incoming requests have a matching sentRequests marker under the sender
+                                                                                            updates.put("friendRequests/" + uid + "/" + senderUid, null);
+                                                                                            updates.put("sentRequests/" + senderUid + "/" + uid, null);
+                                                                                        }
+                                                                                    }
 
-                                                    rootRef.updateChildren(updates)
-                                                            .addOnSuccessListener(unused ->
-                                                                    deleteStorageDataThenAuthAccount(dialog))
-                                                            .addOnFailureListener(e -> {
-                                                                setDeleteInProgress(false);
-                                                                Toast.makeText(getContext(),
-                                                                        "Could not delete account data: " + e.getMessage(),
-                                                                        Toast.LENGTH_LONG).show();
-                                                            });
-                                                })
+                                                                                    for (DataSnapshot sentRequest : sentRequestsSnapshot.getChildren()) {
+                                                                                        String targetUid = sentRequest.getKey();
+                                                                                        if (!TextUtils.isEmpty(targetUid)) {
+                                                                                            //outgoing requests are stored under the target users friendRequests node
+                                                                                            updates.put("sentRequests/" + uid + "/" + targetUid, null);
+                                                                                            updates.put("friendRequests/" + targetUid + "/" + uid, null);
+                                                                                        }
+                                                                                    }
+
+                                                                                    for (DataSnapshot event : eventsSnapshot.getChildren()) {
+                                                                                        String eventId = event.getKey();
+                                                                                        String createdBy = event.child("createdBy").getValue(String.class);
+                                                                                        if (TextUtils.isEmpty(eventId)) {
+                                                                                            continue;
+                                                                                        }
+                                                                                        if (uid.equals(createdBy)) {
+                                                                                            updates.put("Events/" + eventId, null);
+                                                                                        } else if (event.child("invites").child(uid).exists()) {
+                                                                                            updates.put("Events/" + eventId + "/invites/" + uid, null);
+                                                                                        }
+                                                                                    }
+
+                                                                                    rootRef.updateChildren(updates)
+                                                                                            .addOnSuccessListener(unused ->
+                                                                                                    deleteStorageDataThenAuthAccount(dialog))
+                                                                                            .addOnFailureListener(e -> {
+                                                                                                setDeleteInProgress(false);
+                                                                                                Toast.makeText(getContext(),
+                                                                                                        "Could not delete account data: " + e.getMessage(),
+                                                                                                        Toast.LENGTH_LONG).show();
+                                                                                            });
+                                                                                })
+                                                                                .addOnFailureListener(e -> handleDeleteReadFailure(e)))
+                                                                .addOnFailureListener(e -> handleDeleteReadFailure(e)))
                                                 .addOnFailureListener(e -> handleDeleteReadFailure(e)))
                                 .addOnFailureListener(e -> handleDeleteReadFailure(e)))
                 .addOnFailureListener(e -> handleDeleteReadFailure(e));
