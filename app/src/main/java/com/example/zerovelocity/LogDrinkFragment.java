@@ -6,6 +6,8 @@ import android.content.pm.PackageManager;
 import android.location.Location;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -38,6 +40,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 // This fragment is the log entry screen.
 // The user picks a category (Drink or Cigarette), fills in the details
@@ -427,9 +430,56 @@ public class LogDrinkFragment extends Fragment {
             return;
         }
 
-        fusedLocationClient.getCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, null)
-                .addOnSuccessListener(callback::onReady)
-                .addOnFailureListener(e -> callback.onReady(null));
+        AtomicBoolean completed = new AtomicBoolean(false);
+        Handler timeoutHandler = new Handler(Looper.getMainLooper());
+
+        Runnable timeout = () -> {
+            if (completed.compareAndSet(false, true)) {
+                Toast.makeText(requireContext(), "Location unavailable. Log saved without map pin.",
+                        Toast.LENGTH_LONG).show();
+                callback.onReady(null);
+            }
+        };
+        timeoutHandler.postDelayed(timeout, 5000);
+
+        // Last known location is usually instant. If it is missing, ask for a fresh fix.
+        fusedLocationClient.getLastLocation()
+                .addOnSuccessListener(lastLocation -> {
+                    if (lastLocation != null && completed.compareAndSet(false, true)) {
+                        timeoutHandler.removeCallbacks(timeout);
+                        callback.onReady(lastLocation);
+                    } else if (lastLocation == null) {
+                        requestFreshLocation(callback, completed, timeoutHandler, timeout);
+                    }
+                })
+                .addOnFailureListener(e ->
+                        requestFreshLocation(callback, completed, timeoutHandler, timeout));
+    }
+
+    @SuppressLint("MissingPermission")
+    private void requestFreshLocation(OnLocationReady callback, AtomicBoolean completed,
+                                      Handler timeoutHandler, Runnable timeout) {
+        fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null)
+                .addOnSuccessListener(location -> {
+                    if (completed.compareAndSet(false, true)) {
+                        timeoutHandler.removeCallbacks(timeout);
+                        if (location == null) {
+                            Toast.makeText(requireContext(),
+                                    "Location unavailable. Log saved without map pin.",
+                                    Toast.LENGTH_LONG).show();
+                        }
+                        callback.onReady(location);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    if (completed.compareAndSet(false, true)) {
+                        timeoutHandler.removeCallbacks(timeout);
+                        Toast.makeText(requireContext(),
+                                "Location unavailable. Log saved without map pin.",
+                                Toast.LENGTH_LONG).show();
+                        callback.onReady(null);
+                    }
+                });
     }
 
     private void uploadLogWithLocation(StorageReference storageRef, String itemName, float units,

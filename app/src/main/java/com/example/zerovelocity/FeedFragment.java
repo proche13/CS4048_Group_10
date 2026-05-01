@@ -330,9 +330,9 @@ public class FeedFragment extends Fragment implements OnMapReadyCallback {
             String categoryText = log.category.toLowerCase();
             String itemText = TextUtils.isEmpty(log.itemName) ? categoryText : log.itemName;
             String locationText = TextUtils.isEmpty(log.locationLabel) ? "Logged from here" : log.locationLabel;
-            float hue = TextUtils.equals(log.category, LogEntry.Category.Drink.name())
-                    ? BitmapDescriptorFactory.HUE_ORANGE
-                    : BitmapDescriptorFactory.HUE_RED;
+            boolean isMyLog = TextUtils.equals(log.userId, myUid);
+            boolean isDrink = TextUtils.equals(log.category, LogEntry.Category.Drink.name());
+            float hue = getMarkerHue(isMyLog, isDrink);
 
             googleMap.addMarker(new MarkerOptions()
                     .position(position)
@@ -353,6 +353,13 @@ public class FeedFragment extends Fragment implements OnMapReadyCallback {
         } else {
             enableMyLocationAndCenter();
         }
+    }
+    //sets color for the marker based on the type and if you or a friend has made the log
+    private float getMarkerHue(boolean isMyLog, boolean isDrink) {
+        if (isMyLog) {
+            return isDrink ? BitmapDescriptorFactory.HUE_ORANGE : BitmapDescriptorFactory.HUE_RED;
+        }
+        return isDrink ? BitmapDescriptorFactory.HUE_GREEN : BitmapDescriptorFactory.HUE_BLUE;
     }
 
     //separates markers that have exactly the same coordinates so none are hidden behind another
