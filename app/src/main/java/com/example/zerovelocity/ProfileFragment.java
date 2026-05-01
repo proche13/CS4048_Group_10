@@ -164,9 +164,9 @@ public class ProfileFragment extends Fragment {
                 }
                 tvTotals.setText(String.format(
                         Locale.getDefault(),
-                        "Drinks: %.0f  |  Cigarettes: %.1f",
+                        "Drinks: %.0f  |  Cigarettes: %.0f",
                         totalDrinks != null ? totalDrinks : 0d,
-                        totalCigarettes != null ? totalCigarettes : 0d
+                        totalCigarettes != null ? totalCigarettes / 0.2d : 0d
                 ));
             }
 
