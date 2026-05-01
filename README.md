@@ -55,6 +55,9 @@ Our app requests:
 - If location permission is denied map pins may be unavailable.
 
 ## ps
+- map will always put same location as the location from the emulator is the same
+- emulator must be wired to use webcam and not emulator phone camera
+
 fuwhads laptop broke during this project so 2 of my commits were done on henry sampers computer these commits were 
 - Improving the ui for the base functionality
 - Adding in first second and third badges for feed as well as corresponding colour schemes
