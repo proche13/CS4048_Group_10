@@ -16,8 +16,14 @@ Most Polluted is our Android app for friends and competetive drinkers/smokers to
 - Expandable feed descriptions that show the first 6 words by default, with More/Less controls.
 - Feed map mode showing logs with saved coordinates.
 - Friends screen for searching, adding, accepting, and viewing friends.
-- Leaderboard for comparing user totals.
-- Calendar/events screen.
+- Case-insensitive friend search with pending request status.
+- Weekly leaderboard that resets every Monday at 00:00.
+- Leaderboard separates drink and cigarette rankings.
+- Calendar/events screen with event creation, friend invites, and map locations.
+- Profile image shown in the toolbar shortcut.
+- Editable profile picture from the profile page.
+- Password change from the profile page.
+- Delete account cleanup for profile, logs, friends, requests, and event links.
 - App-wide light/dark mode toggle from the top-left toolbar icon.
 
 ## Main Screens
@@ -25,11 +31,14 @@ Most Polluted is our Android app for friends and competetive drinkers/smokers to
 - `LoginActivity` - login entry point.
 - `SignUpActivity` - account creation and profile picture setup.
 - `MainActivity` - main app shell, toolbar, bottom navigation, and theme toggle.
-- `FeedFragment` - activity feed and map view.
+- `FeedFragment` - activity feed.
+- `MapFragment` - map view for consumption logs and events.
 - `LogDrinkFragment` - drink/cigarette logging form.
 - `FriendsFragment` - friend search, requests, and friend list.
 - `LeaderboardFragment` - ranking and totals.
 - `CalendarFragment` - events/calendar view.
+- `CreateEventFragment` - event creation form with friend invites.
+- `LocationPickFragment` - location picker support for events.
 - `ProfileFragment` - profile management.
 
 ## Permissions
