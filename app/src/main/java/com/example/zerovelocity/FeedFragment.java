@@ -65,9 +65,11 @@ public class FeedFragment extends Fragment implements OnMapReadyCallback {
 
     private ValueEventListener friendsListener;
     private ValueEventListener logsListener;
+    private ValueEventListener usersListener;
 
     private final HashSet<String> friendIds = new HashSet<>();
     private final List<LogItem> latestLogs = new ArrayList<>();
+    private final Map<String, String> profilePictureUrlsByUserId = new HashMap<>();
 
     public FeedFragment() {
         // Required empty public constructor
@@ -119,9 +121,33 @@ public class FeedFragment extends Fragment implements OnMapReadyCallback {
         rootRef = FirebaseRefs.root();
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity());
 
+        listenToUserProfiles();
         loadFriendsAndThenLogs();
 
         return view;
+    }
+
+    private void listenToUserProfiles() {
+        usersListener = new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                profilePictureUrlsByUserId.clear();
+
+                for (DataSnapshot userSnapshot : snapshot.getChildren()) {
+                    String profilePictureUrl = userSnapshot.child("profilePictureUrl").getValue(String.class);
+                    if (!TextUtils.isEmpty(profilePictureUrl)) {
+                        profilePictureUrlsByUserId.put(userSnapshot.getKey(), profilePictureUrl);
+                    }
+                }
+
+                renderFeedList();
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+            }
+        };
+        rootRef.child("users").addValueEventListener(usersListener);
     }
 
     private void loadFriendsAndThenLogs() {
@@ -155,18 +181,17 @@ public class FeedFragment extends Fragment implements OnMapReadyCallback {
                     public void onDataChange(@NonNull DataSnapshot snapshot) {
 
                         List<LogItem> logs = new ArrayList<>();
-                        Map<String, Float> totalsByUserId = new HashMap<>();
-                        Map<String, String> usernamesByUserId = new HashMap<>();
-
                         for (DataSnapshot child : snapshot.getChildren()) {
                             String userId = child.child("userID").getValue(String.class);
                             String username = child.child("username").getValue(String.class);
                             String category = child.child("category").getValue(String.class);
                             String itemName = child.child("itemName").getValue(String.class);
                             String locationLabel = child.child("location").getValue(String.class);
+                            String description = child.child("description").getValue(String.class);
                             Double unitsValue = child.child("units").getValue(Double.class);
                             Double latitude = child.child("latitude").getValue(Double.class);
                             Double longitude = child.child("longitude").getValue(Double.class);
+                            String imageUrl = child.child("imageUrl").getValue(String.class);
                             Long timestamp = child.child("timestamp").getValue(Long.class);
 
                             if (userId == null || !friendIds.contains(userId)) {
@@ -179,50 +204,16 @@ public class FeedFragment extends Fragment implements OnMapReadyCallback {
 
                             float units = unitsValue != null ? unitsValue.floatValue() : 0f;
 
-                            logs.add(new LogItem(userId, username, category, itemName, locationLabel,
-                                    units, latitude, longitude, timestamp != null ? timestamp : 0L));
-
-                            usernamesByUserId.put(userId, username);
-                            totalsByUserId.put(userId, totalsByUserId.getOrDefault(userId, 0f) + units);
+                            logs.add(new LogItem(userId, username, category, itemName, locationLabel, description,
+                                    units, latitude, longitude, imageUrl, timestamp != null ? timestamp : 0L));
                         }
 
                         Collections.sort(logs, (a, b) -> Long.compare(b.timestamp, a.timestamp));
                         latestLogs.clear();
                         latestLogs.addAll(logs);
 
-                        Map<String, Integer> ranksByUserId = getTopThreeRanks(totalsByUserId);
-
-                        List<FeedAdapter.FeedItem> formattedFeed = new ArrayList<>();
-                        for (LogItem log : logs) {
-                            String displayName = TextUtils.equals(log.userId, myUid) ? "You" : log.username;
-                            int rank = ranksByUserId.containsKey(log.userId) ? ranksByUserId.get(log.userId) : 0;
-                            formattedFeed.add(new FeedAdapter.FeedItem(
-                                    displayName + " logged " + log.units + " " + log.category.toLowerCase(),
-                                    rank));
-                        }
-
-                        adapter.update(formattedFeed);
+                        renderFeedList();
                         renderMapMarkers();
-
-                        String topUserId = null;
-                        float maxUnits = -1f;
-
-                        for (Map.Entry<String, Float> entry : totalsByUserId.entrySet()) {
-                            if (entry.getValue() > maxUnits) {
-                                maxUnits = entry.getValue();
-                                topUserId = entry.getKey();
-                            }
-                        }
-
-                        if (topUserId != null) {
-                            String topUsername = TextUtils.equals(topUserId, myUid)
-                                    ? "You"
-                                    : usernamesByUserId.get(topUserId);
-
-                            tvLeader.setText("Top user: " + topUsername);
-                        } else {
-                            tvLeader.setText("Top user: None");
-                        }
                     }
 
                     @Override
@@ -230,6 +221,60 @@ public class FeedFragment extends Fragment implements OnMapReadyCallback {
                     }
                 };
         rootRef.child("consumptionLogs").addValueEventListener(logsListener);
+    }
+
+    private void renderFeedList() {
+        if (adapter == null || tvLeader == null) {
+            return;
+        }
+
+        Map<String, Float> totalsByUserId = new HashMap<>();
+        Map<String, String> usernamesByUserId = new HashMap<>();
+
+        for (LogItem log : latestLogs) {
+            totalsByUserId.put(log.userId, totalsByUserId.getOrDefault(log.userId, 0f) + log.units);
+            usernamesByUserId.put(log.userId, log.username);
+        }
+
+        Map<String, Integer> ranksByUserId = getTopThreeRanks(totalsByUserId);
+
+        List<FeedAdapter.FeedItem> formattedFeed = new ArrayList<>();
+        for (LogItem log : latestLogs) {
+            String displayName = TextUtils.equals(log.userId, myUid) ? "You" : log.username;
+            int rank = ranksByUserId.containsKey(log.userId) ? ranksByUserId.get(log.userId) : 0;
+            String categoryText = log.category.toLowerCase();
+            String itemText = TextUtils.isEmpty(log.itemName) ? categoryText : log.itemName;
+            String locationText = TextUtils.isEmpty(log.locationLabel) ? "Unknown spot" : log.locationLabel;
+            formattedFeed.add(new FeedAdapter.FeedItem(
+                    displayName + " logged " + log.units + " " + categoryText,
+                    itemText + " at " + locationText,
+                    log.description,
+                    rank,
+                    profilePictureUrlsByUserId.get(log.userId),
+                    log.imageUrl));
+        }
+
+        adapter.update(formattedFeed);
+
+        String topUserId = null;
+        float maxUnits = -1f;
+
+        for (Map.Entry<String, Float> entry : totalsByUserId.entrySet()) {
+            if (entry.getValue() > maxUnits) {
+                maxUnits = entry.getValue();
+                topUserId = entry.getKey();
+            }
+        }
+
+        if (topUserId != null) {
+            String topUsername = TextUtils.equals(topUserId, myUid)
+                    ? "You"
+                    : usernamesByUserId.get(topUserId);
+
+            tvLeader.setText("Top user: " + topUsername);
+        } else {
+            tvLeader.setText("Top user: None");
+        }
     }
 
     private void toggleMapMode() {
@@ -397,21 +442,26 @@ public class FeedFragment extends Fragment implements OnMapReadyCallback {
         String category;
         String itemName;
         String locationLabel;
+        String description;
         float units;
         Double latitude;
         Double longitude;
+        String imageUrl;
         long timestamp;
 
         LogItem(String userId, String username, String category, String itemName, String locationLabel,
-                float units, Double latitude, Double longitude, long timestamp) {
+                String description,
+                float units, Double latitude, Double longitude, String imageUrl, long timestamp) {
             this.userId = userId;
             this.username = username;
             this.category = category;
             this.itemName = itemName;
             this.locationLabel = locationLabel;
+            this.description = description;
             this.units = units;
             this.latitude = latitude;
             this.longitude = longitude;
+            this.imageUrl = imageUrl;
             this.timestamp = timestamp;
         }
     }
@@ -424,6 +474,12 @@ public class FeedFragment extends Fragment implements OnMapReadyCallback {
         }
         if (rootRef != null && logsListener != null) {
             rootRef.child("consumptionLogs").removeEventListener(logsListener);
+        }
+        if (rootRef != null && usersListener != null) {
+            rootRef.child("users").removeEventListener(usersListener);
+        }
+        if (adapter != null) {
+            adapter.shutdown();
         }
         googleMap = null;
     }
