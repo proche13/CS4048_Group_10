@@ -628,14 +628,14 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
         TextView nameView = new TextView(context);
         nameView.setText(TextUtils.equals(log.userId, myUid) ? "You" : log.username);
-        nameView.setTextColor(Color.parseColor("#111111"));
+        nameView.setTextColor(Color.BLACK);
         nameView.setTextSize(16);
         nameView.setTypeface(nameView.getTypeface(), android.graphics.Typeface.BOLD);
         textContainer.addView(nameView);
 
         TextView drinkView = new TextView(context);
         drinkView.setText(log.itemName);
-        drinkView.setTextColor(Color.parseColor("#444444"));
+        drinkView.setTextColor(Color.BLACK);
         drinkView.setTextSize(15);
         drinkView.setPadding(0, dpToPx(2), 0, 0);
         textContainer.addView(drinkView);
