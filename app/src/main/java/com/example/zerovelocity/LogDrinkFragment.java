@@ -268,7 +268,7 @@ public class LogDrinkFragment extends Fragment {
 
     private void updateCalculatedUnits() {
         if (currentCategory == LogEntry.Category.Cigarette) {
-            etUnits.setText("0.2");
+            etUnits.setText("1");
         } else if (isSpiritSelected()) {
             etUnits.setText("Double".equals(etSpiritMeasure.getText().toString()) ? "2" : "1");
         } else if (TextUtils.isEmpty(etDrinkType.getText())) {
