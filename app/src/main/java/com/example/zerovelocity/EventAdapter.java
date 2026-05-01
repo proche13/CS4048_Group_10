@@ -82,8 +82,15 @@ public class EventAdapter extends RecyclerView.Adapter<EventAdapter.EventViewHol
                     @Override
                     public void onDataChange(@NonNull DataSnapshot friendsSnap) {
                         List<String> friendUids = new ArrayList<>();
+                        String[] friendNames = new String[(int) friendsSnap.getChildrenCount()];
+                        int index = 0;
                         for (DataSnapshot child : friendsSnap.getChildren()) {
-                            friendUids.add(child.getKey());
+                            String uid = child.getKey();
+                            if (uid != null) {
+                                friendUids.add(uid);
+                                friendNames[index] = child.child("displayName").getValue(String.class);
+                                index++;
+                            }
                         }
 
                         if (friendUids.isEmpty()) {
@@ -91,7 +98,7 @@ public class EventAdapter extends RecyclerView.Adapter<EventAdapter.EventViewHol
                             return;
                         }
 
-                        fetchUsernamesAndShowDialog(context, event, friendUids, dbRef);
+                        fetchUsernamesAndShowDialog(context, event, friendUids, friendNames, dbRef);
                     }
 
                     @Override
@@ -102,6 +109,7 @@ public class EventAdapter extends RecyclerView.Adapter<EventAdapter.EventViewHol
     }
     private void fetchUsernamesAndShowDialog(Context context, EventItem event,
                                              List<String> friendUids,
+                                             String[] friendNames,
                                              DatabaseReference dbRef) {
         String[] names = new String[friendUids.size()];
         boolean[] checked = new boolean[friendUids.size()];
@@ -111,13 +119,16 @@ public class EventAdapter extends RecyclerView.Adapter<EventAdapter.EventViewHol
             final int idx = i;
             final String uid = friendUids.get(i);
 
-            dbRef.child("friends").child(currentUid).child(uid).child("displayName")
+            dbRef.child("users").child(uid).child("displayName")
                     .addListenerForSingleValueEvent(new ValueEventListener() {
                         @Override
                         public void onDataChange(@NonNull DataSnapshot snap) {
-                            String username = snap.getValue(String.class);
-                            names[idx] = (username != null && !username.isEmpty())
-                                    ? username : uid;
+                            String displayName = snap.getValue(String.class);
+                            if (displayName == null || displayName.isEmpty()) {
+                                displayName = idx < friendNames.length ? friendNames[idx] : null;
+                            }
+                            names[idx] = (displayName != null && !displayName.isEmpty())
+                                    ? displayName : uid;
 
                             remaining[0]--;
                             if (remaining[0] == 0) {

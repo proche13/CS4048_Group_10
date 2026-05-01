@@ -172,27 +172,33 @@ public class CreateEventFragment extends DialogFragment {
         rootRef.child("friends").child(myUid).addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
+                friendItems.clear();
                 long count = snapshot.getChildrenCount();
                 if (count == 0) {
                     if (isAdded()) tvNoFriends.setVisibility(View.VISIBLE);
+                    friendAdapter.notifyDataSetChanged();
                     return;
                 }
                 if (isAdded()) tvNoFriends.setVisibility(View.GONE);
                 int[] remaining = {(int) count};
                 for (DataSnapshot child : snapshot.getChildren()) {
                     String friendUid = child.getKey();
+                    String friendDisplayName = child.child("displayName").getValue(String.class);
                     if (friendUid == null) {
                         remaining[0]--;
                         continue;
                     }
-                    rootRef.child("users").child(friendUid).child("username")
+                    rootRef.child("users").child(friendUid).child("displayName")
                             .addListenerForSingleValueEvent(new ValueEventListener() {
                                 @Override
                                 public void onDataChange(@NonNull DataSnapshot snap) {
-                                    String username = snap.getValue(String.class);
+                                    String displayName = snap.getValue(String.class);
+                                    if (TextUtils.isEmpty(displayName)) {
+                                        displayName = friendDisplayName;
+                                    }
                                     friendItems.add(new FriendInviteItem(
                                             friendUid,
-                                            !TextUtils.isEmpty(username) ? username : friendUid
+                                            !TextUtils.isEmpty(displayName) ? displayName : friendUid
                                     ));
                                     remaining[0]--;
                                     if (remaining[0] == 0 && isAdded()) {
