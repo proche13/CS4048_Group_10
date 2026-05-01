@@ -29,4 +29,6 @@
     <string name="error_profile_save_failed">Account created but profile save failed.</string>
     <string name="feed_profile_picture">Logger profile picture</string>
     <string name="feed_log_image">Uploaded log image</string>
+    <string name="action_enable_dark_mode">Switch to dark mode</string>
+    <string name="action_enable_light_mode">Switch to light mode</string>
 </resources>

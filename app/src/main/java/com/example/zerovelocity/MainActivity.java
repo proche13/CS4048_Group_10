@@ -16,6 +16,7 @@ import android.text.TextUtils;
 import android.view.MenuItem;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatDelegate;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
@@ -33,28 +34,37 @@ import java.util.concurrent.Executors;
 
 public class MainActivity extends AppCompatActivity {
 
+    private static final String THEME_PREFS = "theme_preferences";
+    private static final String KEY_DARK_MODE = "dark_mode";
+
     private MaterialToolbar topBar;
     private final ExecutorService imageExecutor = Executors.newSingleThreadExecutor();
 
     //sets up the main shell, default fragment, bottom navigation, and profile shortcut
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        applySavedTheme();
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        //load the feed fragment as the default screen on launch
-        loadFragment(new FeedFragment());
         //loads profile picture as button for profile
         topBar = findViewById(R.id.top_app_bar);
         BottomNavigationView bottomNav = findViewById(R.id.bottom_nav);
+        setupThemeToggle();
         refreshProfileIcon();
 
-        // top-left plus icon opens the add friends screen
-        topBar.setNavigationOnClickListener(v -> loadFragment(new FriendsFragment()));
+        //load the feed fragment as the default screen only on a fresh launch.
+        //Theme switches recreate this activity, and Android restores the current fragment.
+        if (savedInstanceState == null) {
+            loadFragment(new FeedFragment());
+        }
 
         topBar.setOnMenuItemClickListener(item -> {
             if (item.getItemId() == R.id.action_profile) {
                 loadFragment(new ProfileFragment());
+                return true;
+            } else if (item.getItemId() == R.id.action_friends) {
+                loadFragment(new FriendsFragment());
                 return true;
             }
             return false;
@@ -83,6 +93,44 @@ public class MainActivity extends AppCompatActivity {
             }
             return false;
         });
+    }
+
+    private void applySavedTheme() {
+        AppCompatDelegate.setDefaultNightMode(isDarkModeEnabled()
+                ? AppCompatDelegate.MODE_NIGHT_YES
+                : AppCompatDelegate.MODE_NIGHT_NO);
+    }
+
+    private void setupThemeToggle() {
+        updateThemeToggleIcon();
+        topBar.setNavigationOnClickListener(v -> toggleTheme());
+    }
+
+    private boolean isDarkModeEnabled() {
+        return getSharedPreferences(THEME_PREFS, MODE_PRIVATE)
+                .getBoolean(KEY_DARK_MODE, false);
+    }
+
+    private void toggleTheme() {
+        boolean enableDarkMode = !isDarkModeEnabled();
+        getSharedPreferences(THEME_PREFS, MODE_PRIVATE)
+                .edit()
+                .putBoolean(KEY_DARK_MODE, enableDarkMode)
+                .apply();
+
+        AppCompatDelegate.setDefaultNightMode(enableDarkMode
+                ? AppCompatDelegate.MODE_NIGHT_YES
+                : AppCompatDelegate.MODE_NIGHT_NO);
+    }
+
+    private void updateThemeToggleIcon() {
+        if (isDarkModeEnabled()) {
+            topBar.setNavigationIcon(R.drawable.ic_light_mode_24);
+            topBar.setNavigationContentDescription(R.string.action_enable_light_mode);
+        } else {
+            topBar.setNavigationIcon(R.drawable.ic_dark_mode_24);
+            topBar.setNavigationContentDescription(R.string.action_enable_dark_mode);
+        }
     }
 
     //replaces the visible screen inside the activities fragment container.

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="auth_background_start">#191714</color>
+    <color name="auth_background_end">#10201C</color>
+    <color name="auth_surface">#25211D</color>
+    <color name="auth_card_stroke">#4B4138</color>
+    <color name="auth_brand_ink">#F6EAE0</color>
+    <color name="auth_text_primary">#F6EAE0</color>
+    <color name="auth_text_secondary">#CDBCAD</color>
+    <color name="auth_button">#D88561</color>
+    <color name="auth_link">#F0A57D</color>
+    <color name="auth_input_fill">#302922</color>
+    <color name="auth_input_stroke">#6B5749</color>
+    <color name="feed_gold">#5F4615</color>
+    <color name="feed_gold_stroke">#D6A641</color>
+    <color name="feed_silver">#3D4148</color>
+    <color name="feed_silver_stroke">#AEB5C0</color>
+    <color name="feed_bronze">#5B3520</color>
+    <color name="feed_bronze_stroke">#D28A52</color>
+</resources>

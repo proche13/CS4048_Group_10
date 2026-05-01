@@ -5,17 +5,18 @@
     android:layout_height="match_parent"
     android:orientation="vertical">
 
-    <!-- Top app bar: add-friends (plus) on left, profile icon on right -->
+    <!-- Top app bar stays visible across the main screens and includes the profile icon -->
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/top_app_bar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:backgroundTint="@android:color/white"
+        android:backgroundTint="@color/auth_surface"
         android:elevation="4dp"
         android:minHeight="?attr/actionBarSize"
         android:title="Most Polluted"
-        app:navigationIcon="@drawable/ic_nav_add"
+        app:navigationIconTint="@color/auth_text_primary"
         app:menu="@menu/top_app_bar_menu"
+        app:titleTextColor="@color/auth_text_primary"
         app:titleCentered="false" />
 
     <!-- fragment container where the selected screen is displayed -->
@@ -30,9 +31,6 @@
         android:id="@+id/bottom_nav"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:itemIconSize="28dp"
-        app:itemIconTint="@color/bottom_nav_item_color"
-        app:itemTextColor="@color/bottom_nav_item_color"
         app:menu="@menu/bottom_nav_menu" />
 
 </LinearLayout>

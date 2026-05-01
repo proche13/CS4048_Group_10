@@ -2,6 +2,12 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
+    <item
+        android:id="@+id/action_friends"
+        android:icon="@android:drawable/ic_menu_add"
+        android:title="Friends"
+        app:showAsAction="always" />
+
     <!-- Toolbar action that opens the usera profile screen -->
     <item
         android:id="@+id/action_profile"
