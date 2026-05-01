@@ -79,7 +79,8 @@ public class CalendarFragment extends Fragment {
             filterAndDisplay();
         });
 
-        addEventBtn.setOnClickListener(v -> showAddEventDialog());
+        addEventBtn.setOnClickListener(v ->
+                new CreateEventFragment().show(getChildFragmentManager(), "create_event"));
 
         if (currentUid != null) {
             listenToEvents(currentUid);
