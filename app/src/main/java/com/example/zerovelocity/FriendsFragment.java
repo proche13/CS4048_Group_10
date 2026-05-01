@@ -1,7 +1,11 @@
 package com.example.zerovelocity;
 
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.text.Editable;
 import android.text.TextUtils;
+import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -27,6 +31,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -42,11 +47,16 @@ public class FriendsFragment extends Fragment {
 
     private DatabaseReference dbRef;
     private String myUid;
+    private final Handler searchHandler = new Handler(Looper.getMainLooper());
+    private Runnable pendingSearch;
 
     // uids already friends with the current user
     private final Set<String> friendUids = new HashSet<>();
-    // uids the current user has already sent a request to (tracked locally per session)
+    // uids the current user has already sent a request to, loaded from Firebase
     private final Set<String> sentRequestUids = new HashSet<>();
+    private ValueEventListener friendsListener;
+    private ValueEventListener incomingRequestsListener;
+    private ValueEventListener sentRequestsListener;
 
     private UserAdapter searchAdapter;
     private UserAdapter friendsAdapter;
@@ -96,16 +106,32 @@ public class FriendsFragment extends Fragment {
         rvRequests.setAdapter(requestAdapter);
 
         btnSearch.setOnClickListener(v -> searchUsers());
+        //listener for typing in search bar to update the search results as user types
+        etSearch.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                scheduleSearch();
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+            }
+        });
 
         loadFriends();
         loadIncomingRequests();
+        loadSentRequests();
 
         return view;
     }
 
     // listens for changes to the current user's friend list and refreshes the recycler view
     private void loadFriends() {
-        dbRef.child("friends").child(myUid).addValueEventListener(new ValueEventListener() {
+        friendsListener = new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 friendsList.clear();
@@ -116,6 +142,8 @@ public class FriendsFragment extends Fragment {
                     if (uid != null && displayName != null) {
                         friendsList.add(new UserItem(uid, displayName));
                         friendUids.add(uid);
+                        //once someone is an actual friend they should no longer look pending in search
+                        sentRequestUids.remove(uid);
                     }
                 }
                 friendsAdapter.notifyDataSetChanged();
@@ -128,12 +156,13 @@ public class FriendsFragment extends Fragment {
             public void onCancelled(@NonNull DatabaseError error) {
                 Toast.makeText(getContext(), "Failed to load friends", Toast.LENGTH_SHORT).show();
             }
-        });
+        };
+        dbRef.child("friends").child(myUid).addValueEventListener(friendsListener);
     }
 
     // listens for incoming friend requests sent to the current user
     private void loadIncomingRequests() {
-        dbRef.child("friendRequests").child(myUid).addValueEventListener(new ValueEventListener() {
+        incomingRequestsListener = new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 pendingRequests.clear();
@@ -152,18 +181,39 @@ public class FriendsFragment extends Fragment {
             public void onCancelled(@NonNull DatabaseError error) {
                 Toast.makeText(getContext(), "Failed to load requests", Toast.LENGTH_SHORT).show();
             }
-        });
+        };
+        dbRef.child("friendRequests").child(myUid).addValueEventListener(incomingRequestsListener);
     }
 
-    // searches the users node by display name, excluding self, existing friends, and already-requested users
+    // listens to requests sent by this user so Pending survives tab changes and app restarts
+    private void loadSentRequests() {
+        sentRequestsListener = new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                sentRequestUids.clear();
+                for (DataSnapshot child : snapshot.getChildren()) {
+                    sentRequestUids.add(child.getKey());
+                }
+                searchUsers();
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                Toast.makeText(getContext(), "Failed to load sent requests", Toast.LENGTH_SHORT).show();
+            }
+        };
+        dbRef.child("sentRequests").child(myUid).addValueEventListener(sentRequestsListener);
+    }
+
+    // searches the users node by display name, excluding self and existing friends
     private void searchUsers() {
-        String query = etSearch.getText().toString().trim();
+        String query = etSearch.getText().toString().trim().toLowerCase(Locale.getDefault());
         if (TextUtils.isEmpty(query)) {
-            Toast.makeText(getContext(), "Enter a name to search", Toast.LENGTH_SHORT).show();
+            clearSearchResults();
             return;
         }
 
-        dbRef.child("users").orderByChild("displayName")
+        dbRef.child("users").orderByChild("displayNameLowercase")
                 .startAt(query).endAt(query + "\uf8ff")
                 .get()
                 .addOnSuccessListener(snapshot -> {
@@ -172,21 +222,34 @@ public class FriendsFragment extends Fragment {
                         String uid = child.child("uid").getValue(String.class);
                         String displayName = child.child("displayName").getValue(String.class);
                         if (uid != null && displayName != null && !uid.equals(myUid)
-                                && !friendUids.contains(uid)
-                                && !sentRequestUids.contains(uid)) {
-                            searchResults.add(new UserItem(uid, displayName));
+                                && !friendUids.contains(uid)) {
+                            searchResults.add(new UserItem(uid, displayName, sentRequestUids.contains(uid)));
                         }
                     }
                     searchAdapter.notifyDataSetChanged();
                     boolean hasResults = !searchResults.isEmpty();
                     tvSearchHeader.setVisibility(hasResults ? View.VISIBLE : View.GONE);
                     cardSearchResults.setVisibility(hasResults ? View.VISIBLE : View.GONE);
-                    if (!hasResults) {
-                        Toast.makeText(getContext(), "No users found", Toast.LENGTH_SHORT).show();
-                    }
                 })
                 .addOnFailureListener(e ->
                         Toast.makeText(getContext(), "Search failed: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+    }
+
+    // waits briefly after each keystroke so Firebase is not queried on every single character
+    private void scheduleSearch() {
+        if (pendingSearch != null) {
+            searchHandler.removeCallbacks(pendingSearch);
+        }
+
+        pendingSearch = this::searchUsers;
+        searchHandler.postDelayed(pendingSearch, 300);
+    }
+
+    private void clearSearchResults() {
+        searchResults.clear();
+        searchAdapter.notifyDataSetChanged();
+        tvSearchHeader.setVisibility(View.GONE);
+        cardSearchResults.setVisibility(View.GONE);
     }
 
     // sends a friend request by writing to friendRequests/{targetUid}/{myUid}
@@ -199,16 +262,15 @@ public class FriendsFragment extends Fragment {
             data.put("uid", myUid);
             data.put("displayName", myDisplayName);
 
-            dbRef.child("friendRequests").child(user.uid).child(myUid).setValue(data)
+            Map<String, Object> updates = new HashMap<>();
+            updates.put("friendRequests/" + user.uid + "/" + myUid, data);
+            updates.put("sentRequests/" + myUid + "/" + user.uid, true);
+
+            dbRef.updateChildren(updates)
                     .addOnSuccessListener(aVoid -> {
                         sentRequestUids.add(user.uid);
                         Toast.makeText(getContext(), "Request sent to " + user.displayName, Toast.LENGTH_SHORT).show();
-                        searchResults.removeIf(u -> u.uid.equals(user.uid));
-                        searchAdapter.notifyDataSetChanged();
-                        if (searchResults.isEmpty()) {
-                            tvSearchHeader.setVisibility(View.GONE);
-                            cardSearchResults.setVisibility(View.GONE);
-                        }
+                        searchUsers();
                     })
                     .addOnFailureListener(e ->
                             Toast.makeText(getContext(), "Failed to send request: " + e.getMessage(), Toast.LENGTH_SHORT).show());
@@ -233,10 +295,13 @@ public class FriendsFragment extends Fragment {
             updates.put("friends/" + myUid + "/" + requester.uid, themData);
             updates.put("friends/" + requester.uid + "/" + myUid, meData);
             updates.put("friendRequests/" + myUid + "/" + requester.uid, null);
+            updates.put("sentRequests/" + requester.uid + "/" + myUid, null);
 
             dbRef.updateChildren(updates)
-                    .addOnSuccessListener(aVoid ->
-                            Toast.makeText(getContext(), requester.displayName + " added as a friend", Toast.LENGTH_SHORT).show())
+                    .addOnSuccessListener(aVoid -> {
+                        sentRequestUids.remove(requester.uid);
+                        Toast.makeText(getContext(), requester.displayName + " added as a friend", Toast.LENGTH_SHORT).show();
+                    })
                     .addOnFailureListener(e ->
                             Toast.makeText(getContext(), "Failed to accept request: " + e.getMessage(), Toast.LENGTH_SHORT).show());
         }).addOnFailureListener(e ->
@@ -246,8 +311,10 @@ public class FriendsFragment extends Fragment {
     // declines a friend request by removing it from friendRequests
     private void declineRequest(UserItem requester) {
         dbRef.child("friendRequests").child(myUid).child(requester.uid).removeValue()
-                .addOnSuccessListener(aVoid ->
-                        Toast.makeText(getContext(), "Request declined", Toast.LENGTH_SHORT).show())
+                .addOnSuccessListener(aVoid -> {
+                    dbRef.child("sentRequests").child(requester.uid).child(myUid).removeValue();
+                    Toast.makeText(getContext(), "Request declined", Toast.LENGTH_SHORT).show();
+                })
                 .addOnFailureListener(e ->
                         Toast.makeText(getContext(), "Failed to decline request", Toast.LENGTH_SHORT).show());
     }
@@ -259,9 +326,31 @@ public class FriendsFragment extends Fragment {
         updates.put("friends/" + user.uid + "/" + myUid, null);
 
         dbRef.updateChildren(updates)
-                .addOnSuccessListener(aVoid ->
-                        Toast.makeText(getContext(), user.displayName + " removed", Toast.LENGTH_SHORT).show())
+                .addOnSuccessListener(aVoid -> {
+                    sentRequestUids.remove(user.uid);
+                    Toast.makeText(getContext(), user.displayName + " removed", Toast.LENGTH_SHORT).show();
+                    searchUsers();
+                })
                 .addOnFailureListener(e ->
                         Toast.makeText(getContext(), "Failed to remove friend: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        if (pendingSearch != null) {
+            searchHandler.removeCallbacks(pendingSearch);
+        }
+        if (dbRef != null && myUid != null) {
+            if (friendsListener != null) {
+                dbRef.child("friends").child(myUid).removeEventListener(friendsListener);
+            }
+            if (incomingRequestsListener != null) {
+                dbRef.child("friendRequests").child(myUid).removeEventListener(incomingRequestsListener);
+            }
+            if (sentRequestsListener != null) {
+                dbRef.child("sentRequests").child(myUid).removeEventListener(sentRequestsListener);
+            }
+        }
     }
 }
