@@ -30,6 +30,7 @@ import com.google.firebase.storage.StorageReference;
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 public class SignUpActivity extends AppCompatActivity {
@@ -245,7 +246,7 @@ public class SignUpActivity extends AppCompatActivity {
         Map<String, Object> user = new HashMap<>();
         user.put("uid", uid);
         user.put("displayName", displayName);
-        user.put("displayNameLowercase", displayName.toLowerCase());
+        user.put("displayNameLowercase", displayName.toLowerCase(Locale.getDefault()));
         user.put("email", email);
         user.put("profilePictureUrl", profilePictureUrl);
         user.put("totalDrinks", 0);

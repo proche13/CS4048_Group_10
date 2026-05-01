@@ -27,7 +27,8 @@ public class LogDrinkViewModel extends ViewModel {
 
     // Saves the log entry and records the item name as a suggestion for next time
     public void logEvent(LogEntry.Category category, String itemName, float units,
-                         String description, String location, String imageUrl) {
+                         String description, String location,
+                         Double latitude, Double longitude, String imageUrl) {
         FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
         if (currentUser == null) return;
 
@@ -35,7 +36,8 @@ public class LogDrinkViewModel extends ViewModel {
         String username = currentUser.getDisplayName() != null
                 ? currentUser.getDisplayName() : "Unknown";
 
-        repo.logEvent(userID, username, category, itemName, units, description, location, imageUrl);
+        repo.logEvent(userID, username, category, itemName, units, description, location,
+                latitude, longitude, imageUrl);
 
         if (!itemName.isEmpty()) {
             repo.saveItemSuggestion(userID, category, itemName);

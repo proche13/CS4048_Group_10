@@ -7,6 +7,7 @@ import android.widget.Button;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.List;
@@ -39,8 +40,12 @@ public class UserAdapter extends RecyclerView.Adapter<UserAdapter.ViewHolder> {
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         UserItem user = items.get(position);
         holder.tvName.setText(user.displayName);
-        holder.btnAction.setText(buttonLabel);
-        holder.btnAction.setOnClickListener(v -> callback.onAction(user));
+        holder.btnAction.setText(user.pending ? "Pending" : buttonLabel);
+        holder.btnAction.setEnabled(!user.pending);
+        holder.btnAction.setOnClickListener(user.pending ? null : v -> callback.onAction(user));
+        holder.btnAction.setBackgroundTintList(ContextCompat.getColorStateList(
+                holder.itemView.getContext(),
+                user.pending ? R.color.auth_text_secondary : R.color.auth_button));
     }
 
     @Override

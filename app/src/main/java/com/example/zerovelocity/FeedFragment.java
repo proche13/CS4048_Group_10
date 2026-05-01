@@ -1,5 +1,9 @@
 package com.example.zerovelocity;
 
+import android.Manifest;
+import android.annotation.SuppressLint;
+import android.content.pm.PackageManager;
+import android.location.Location;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
@@ -8,12 +12,27 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.gms.maps.CameraUpdateFactory;
+import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.OnMapReadyCallback;
+import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.Priority;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.LatLngBounds;
+import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.material.button.MaterialButton;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -27,20 +46,50 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
-public class FeedFragment extends Fragment {
+public class FeedFragment extends Fragment implements OnMapReadyCallback {
 
     private RecyclerView rvFeed;
+    private View mapContainer;
     private TextView tvLeader;
+    private MaterialButton btnMapToggle;
     private FeedAdapter adapter;
 
     private DatabaseReference rootRef;
     private String myUid;
+    private GoogleMap googleMap;
+    private FusedLocationProviderClient fusedLocationClient;
+    private boolean mapMode;
+    private boolean mapFragmentCreated;
+    private boolean hasCenteredMap;
+    private ActivityResultLauncher<String[]> mapLocationPermissionLauncher;
 
+    private ValueEventListener friendsListener;
+    private ValueEventListener logsListener;
 
     private final HashSet<String> friendIds = new HashSet<>();
+    private final List<LogItem> latestLogs = new ArrayList<>();
 
     public FeedFragment() {
         // Required empty public constructor
+    }
+
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        // The map can work without location permission but we need the permission to lets us zoom
+        // straight to the current user and show the blue current-location dot
+        mapLocationPermissionLauncher = registerForActivityResult(
+                new ActivityResultContracts.RequestMultiplePermissions(),
+                permissions -> {
+                    boolean granted = Boolean.TRUE.equals(permissions.get(Manifest.permission.ACCESS_FINE_LOCATION))
+                            || Boolean.TRUE.equals(permissions.get(Manifest.permission.ACCESS_COARSE_LOCATION));
+                    if (granted) {
+                        enableMyLocationAndCenter();
+                    } else {
+                        Toast.makeText(requireContext(), "Map location permission denied", Toast.LENGTH_SHORT).show();
+                    }
+                });
     }
 
     @Nullable
@@ -52,11 +101,14 @@ public class FeedFragment extends Fragment {
         View view = inflater.inflate(R.layout.fragment_feed, container, false);
 
         rvFeed = view.findViewById(R.id.rv_feed);
+        mapContainer = view.findViewById(R.id.map_container);
         tvLeader = view.findViewById(R.id.tv_leader);
+        btnMapToggle = view.findViewById(R.id.btn_feed_map_toggle);
 
         rvFeed.setLayoutManager(new LinearLayoutManager(getContext()));
         adapter = new FeedAdapter(new ArrayList<>());
         rvFeed.setAdapter(adapter);
+        btnMapToggle.setOnClickListener(v -> toggleMapMode());
 
         if (FirebaseAuth.getInstance().getCurrentUser() == null) {
             Toast.makeText(getContext(), "Not logged in", Toast.LENGTH_SHORT).show();
@@ -65,6 +117,7 @@ public class FeedFragment extends Fragment {
 
         myUid = FirebaseAuth.getInstance().getCurrentUser().getUid();
         rootRef = FirebaseRefs.root();
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity());
 
         loadFriendsAndThenLogs();
 
@@ -72,8 +125,7 @@ public class FeedFragment extends Fragment {
     }
 
     private void loadFriendsAndThenLogs() {
-        rootRef.child("friends").child(myUid)
-                .addValueEventListener(new ValueEventListener() {
+        friendsListener = new ValueEventListener() {
                     @Override
                     public void onDataChange(@NonNull DataSnapshot snapshot) {
                         friendIds.clear();
@@ -89,12 +141,16 @@ public class FeedFragment extends Fragment {
                     @Override
                     public void onCancelled(@NonNull DatabaseError error) {
                     }
-                });
+                };
+        rootRef.child("friends").child(myUid).addValueEventListener(friendsListener);
     }
 
     private void listenToLogs() {
-        rootRef.child("consumptionLogs")
-                .addValueEventListener(new ValueEventListener() {
+        if (logsListener != null) {
+            return;
+        }
+
+        logsListener = new ValueEventListener() {
                     @Override
                     public void onDataChange(@NonNull DataSnapshot snapshot) {
 
@@ -106,7 +162,11 @@ public class FeedFragment extends Fragment {
                             String userId = child.child("userID").getValue(String.class);
                             String username = child.child("username").getValue(String.class);
                             String category = child.child("category").getValue(String.class);
+                            String itemName = child.child("itemName").getValue(String.class);
+                            String locationLabel = child.child("location").getValue(String.class);
                             Double unitsValue = child.child("units").getValue(Double.class);
+                            Double latitude = child.child("latitude").getValue(Double.class);
+                            Double longitude = child.child("longitude").getValue(Double.class);
                             Long timestamp = child.child("timestamp").getValue(Long.class);
 
                             if (userId == null || !friendIds.contains(userId)) {
@@ -119,13 +179,16 @@ public class FeedFragment extends Fragment {
 
                             float units = unitsValue != null ? unitsValue.floatValue() : 0f;
 
-                            logs.add(new LogItem(userId, username, category, units, timestamp != null ? timestamp : 0L));
+                            logs.add(new LogItem(userId, username, category, itemName, locationLabel,
+                                    units, latitude, longitude, timestamp != null ? timestamp : 0L));
 
                             usernamesByUserId.put(userId, username);
                             totalsByUserId.put(userId, totalsByUserId.getOrDefault(userId, 0f) + units);
                         }
 
                         Collections.sort(logs, (a, b) -> Long.compare(b.timestamp, a.timestamp));
+                        latestLogs.clear();
+                        latestLogs.addAll(logs);
 
                         Map<String, Integer> ranksByUserId = getTopThreeRanks(totalsByUserId);
 
@@ -139,6 +202,7 @@ public class FeedFragment extends Fragment {
                         }
 
                         adapter.update(formattedFeed);
+                        renderMapMarkers();
 
                         String topUserId = null;
                         float maxUnits = -1f;
@@ -164,7 +228,130 @@ public class FeedFragment extends Fragment {
                     @Override
                     public void onCancelled(@NonNull DatabaseError error) {
                     }
-                });
+                };
+        rootRef.child("consumptionLogs").addValueEventListener(logsListener);
+    }
+
+    private void toggleMapMode() {
+        mapMode = !mapMode;
+        rvFeed.setVisibility(mapMode ? View.GONE : View.VISIBLE);
+        mapContainer.setVisibility(mapMode ? View.VISIBLE : View.GONE);
+        btnMapToggle.setText(mapMode ? "Feed" : "Map");
+
+        if (mapMode && !mapFragmentCreated) {
+            mapFragmentCreated = true;
+            SupportMapFragment mapFragment = SupportMapFragment.newInstance();
+            getChildFragmentManager()
+                    .beginTransaction()
+                    .replace(R.id.map_container, mapFragment)
+                    .commit();
+            mapFragment.getMapAsync(this);
+        } else if (mapMode) {
+            requestMapLocationIfNeeded();
+            renderMapMarkers();
+        }
+    }
+
+    @Override
+    public void onMapReady(@NonNull GoogleMap map) {
+        googleMap = map;
+        googleMap.getUiSettings().setZoomControlsEnabled(true);
+        googleMap.getUiSettings().setMapToolbarEnabled(true);
+        requestMapLocationIfNeeded();
+        enableMyLocationAndCenter();
+        renderMapMarkers();
+    }
+
+    private void requestMapLocationIfNeeded() {
+        if (!hasLocationPermission()) {
+            mapLocationPermissionLauncher.launch(new String[]{
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+            });
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private void enableMyLocationAndCenter() {
+        if (googleMap == null || !hasLocationPermission()) {
+            return;
+        }
+
+        googleMap.setMyLocationEnabled(true);
+        googleMap.getUiSettings().setMyLocationButtonEnabled(true);
+
+        if (!hasCenteredMap) {
+            fusedLocationClient.getCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, null)
+                    .addOnSuccessListener(this::centerOnUserLocation)
+                    .addOnFailureListener(e -> fusedLocationClient.getLastLocation()
+                            .addOnSuccessListener(this::centerOnUserLocation));
+        }
+    }
+
+    private void centerOnUserLocation(Location location) {
+        if (googleMap == null || location == null || hasCenteredMap) {
+            return;
+        }
+
+        hasCenteredMap = true;
+        LatLng currentPosition = new LatLng(location.getLatitude(), location.getLongitude());
+        googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(currentPosition, 15f));
+    }
+
+    private boolean hasLocationPermission() {
+        return ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION)
+                == PackageManager.PERMISSION_GRANTED
+                || ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_COARSE_LOCATION)
+                == PackageManager.PERMISSION_GRANTED;
+    }
+
+    // Plots all friend/self feed logs that have coordinates saved from the log screen.
+    private void renderMapMarkers() {
+        if (googleMap == null) {
+            return;
+        }
+
+        googleMap.clear();
+        LatLngBounds.Builder boundsBuilder = new LatLngBounds.Builder();
+        int markerCount = 0;
+        LatLng firstPosition = null;
+
+        for (LogItem log : latestLogs) {
+            if (log.latitude == null || log.longitude == null) {
+                continue;
+            }
+
+            LatLng position = new LatLng(log.latitude, log.longitude);
+            if (firstPosition == null) {
+                firstPosition = position;
+            }
+            String displayName = TextUtils.equals(log.userId, myUid) ? "You" : log.username;
+            String categoryText = log.category.toLowerCase();
+            String itemText = TextUtils.isEmpty(log.itemName) ? categoryText : log.itemName;
+            String locationText = TextUtils.isEmpty(log.locationLabel) ? "Logged from here" : log.locationLabel;
+            float hue = TextUtils.equals(log.category, LogEntry.Category.Drink.name())
+                    ? BitmapDescriptorFactory.HUE_ORANGE
+                    : BitmapDescriptorFactory.HUE_RED;
+
+            googleMap.addMarker(new MarkerOptions()
+                    .position(position)
+                    .title(displayName + " logged " + log.units + " " + categoryText)
+                    .snippet(itemText + " - " + locationText)
+                    .icon(BitmapDescriptorFactory.defaultMarker(hue)));
+
+            boundsBuilder.include(position);
+            markerCount++;
+        }
+
+        if (markerCount == 1) {
+            hasCenteredMap = true;
+            googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(firstPosition, 14f));
+        } else if (markerCount > 1) {
+            hasCenteredMap = true;
+            googleMap.moveCamera(CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), 120));
+        } else {
+            enableMyLocationAndCenter();
+        }
     }
 
     private Map<String, Integer> getTopThreeRanks(Map<String, Float> totalsByUserId) {
@@ -182,15 +369,36 @@ public class FeedFragment extends Fragment {
         String userId;
         String username;
         String category;
+        String itemName;
+        String locationLabel;
         float units;
+        Double latitude;
+        Double longitude;
         long timestamp;
 
-        LogItem(String userId, String username, String category, float units, long timestamp) {
+        LogItem(String userId, String username, String category, String itemName, String locationLabel,
+                float units, Double latitude, Double longitude, long timestamp) {
             this.userId = userId;
             this.username = username;
             this.category = category;
+            this.itemName = itemName;
+            this.locationLabel = locationLabel;
             this.units = units;
+            this.latitude = latitude;
+            this.longitude = longitude;
             this.timestamp = timestamp;
         }
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        if (rootRef != null && myUid != null && friendsListener != null) {
+            rootRef.child("friends").child(myUid).removeEventListener(friendsListener);
+        }
+        if (rootRef != null && logsListener != null) {
+            rootRef.child("consumptionLogs").removeEventListener(logsListener);
+        }
+        googleMap = null;
     }
 }

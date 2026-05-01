@@ -38,7 +38,8 @@ public class LogRepo {
     // Saves a full consumption log entry to Firebase
     public void logEvent(String userID, String username, LogEntry.Category category,
                          String itemName, float units,
-                         String description, String location, String imageUrl) {
+                         String description, String location,
+                         Double latitude, Double longitude, String imageUrl) {
 
         String eventId = UUID.randomUUID().toString();
 
@@ -51,6 +52,10 @@ public class LogRepo {
         entry.put("units",       units);
         entry.put("description", description);
         entry.put("location",    location);
+        if (latitude != null && longitude != null) {
+            entry.put("latitude", latitude);
+            entry.put("longitude", longitude);
+        }
         entry.put("imageUrl",    imageUrl);
         entry.put("timestamp",   System.currentTimeMillis());
 

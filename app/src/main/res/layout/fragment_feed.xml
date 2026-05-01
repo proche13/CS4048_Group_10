@@ -24,13 +24,33 @@
             android:orientation="vertical"
             android:padding="22dp">
 
-            <TextView
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Activity Feed"
-                android:textColor="@color/auth_text_primary"
-                android:textSize="28sp"
-                android:textStyle="bold" />
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <!-- switches the feed between the list and google maps activity view -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_feed_map_toggle"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:minHeight="42dp"
+                    android:text="Map"
+                    android:textAllCaps="false"
+                    app:strokeColor="@color/auth_input_stroke" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:layout_weight="1"
+                    android:text="Activity Feed"
+                    android:textColor="@color/auth_text_primary"
+                    android:textSize="28sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
 
             <TextView
                 android:id="@+id/tv_leader"
@@ -51,5 +71,12 @@
         android:layout_weight="1"
         android:clipToPadding="false"
         android:paddingBottom="12dp" />
+
+    <FrameLayout
+        android:id="@+id/map_container"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:visibility="gone" />
 
 </LinearLayout>

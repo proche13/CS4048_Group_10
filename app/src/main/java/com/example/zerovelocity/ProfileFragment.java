@@ -230,7 +230,7 @@ public class ProfileFragment extends Fragment {
 
         currentUser.updateProfile(request)
                 .addOnSuccessListener(aVoid ->
-                        rootRef.child("users").child(currentUser.getUid()).child("displayName").setValue(updatedName)
+                        saveDisplayNameToDatabase(updatedName)
                                 .addOnSuccessListener(value -> {
                                     Toast.makeText(getContext(), "Profile updated", Toast.LENGTH_SHORT).show();
                                 })
@@ -238,6 +238,14 @@ public class ProfileFragment extends Fragment {
                                         Toast.makeText(getContext(), "Saved to auth only", Toast.LENGTH_SHORT).show()))
                 .addOnFailureListener(e ->
                         Toast.makeText(getContext(), "Failed to update profile", Toast.LENGTH_SHORT).show());
+    }
+
+    //keeps both the visible name and lowercase search key in sync for friend search
+    private com.google.android.gms.tasks.Task<Void> saveDisplayNameToDatabase(String updatedName) {
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("displayName", updatedName);
+        updates.put("displayNameLowercase", updatedName.toLowerCase(Locale.getDefault()));
+        return rootRef.child("users").child(currentUser.getUid()).updateChildren(updates);
     }
 
     //lets the user choose between camera and gallery when replacing their profile picture

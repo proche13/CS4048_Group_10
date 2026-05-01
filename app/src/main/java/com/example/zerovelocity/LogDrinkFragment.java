@@ -1,7 +1,9 @@
 package com.example.zerovelocity;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.content.pm.PackageManager;
+import android.location.Location;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -24,6 +26,9 @@ import com.google.android.material.button.MaterialButton;
 import com.google.android.material.button.MaterialButtonToggleGroup;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.Priority;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 
@@ -50,6 +55,7 @@ public class LogDrinkFragment extends Fragment {
 
     private LogDrinkViewModel viewModel;
     private ArrayAdapter<String> suggestionAdapter;  // feeds past item names into the autocomplete field
+    private FusedLocationProviderClient fusedLocationClient;
 
     // keeps track of which category the user currently has selected
     private LogEntry.Category currentCategory = LogEntry.Category.Drink;
@@ -59,11 +65,13 @@ public class LogDrinkFragment extends Fragment {
 
     // we need to store the camera URI separately so we can access it in the camera result callback
     private Uri cameraImageUri;
+    private Runnable pendingLocationSubmit;
 
     // activity result launchers have to be registered in onCreate, not onCreateView
     private ActivityResultLauncher<String> galleryLauncher;
     private ActivityResultLauncher<Uri> cameraLauncher;
     private ActivityResultLauncher<String> cameraPermissionLauncher;
+    private ActivityResultLauncher<String[]> locationPermissionLauncher;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -84,6 +92,22 @@ public class LogDrinkFragment extends Fragment {
                 new ActivityResultContracts.RequestPermission(),
                 granted -> { if (granted) openCamera(); else
                     Toast.makeText(requireContext(), "Camera permission denied", Toast.LENGTH_SHORT).show(); });
+
+        // asks for device location so logs can be plotted on the feed map
+        locationPermissionLauncher = registerForActivityResult(
+                new ActivityResultContracts.RequestMultiplePermissions(),
+                permissions -> {
+                    boolean granted = Boolean.TRUE.equals(permissions.get(Manifest.permission.ACCESS_FINE_LOCATION))
+                            || Boolean.TRUE.equals(permissions.get(Manifest.permission.ACCESS_COARSE_LOCATION));
+                    if (granted && pendingLocationSubmit != null) {
+                        Runnable submit = pendingLocationSubmit;
+                        pendingLocationSubmit = null;
+                        submit.run();
+                    } else {
+                        pendingLocationSubmit = null;
+                        Toast.makeText(requireContext(), "Location is needed for map pins.", Toast.LENGTH_SHORT).show();
+                    }
+                });
     }
 
     @Override
@@ -112,6 +136,7 @@ public class LogDrinkFragment extends Fragment {
         // set up the view model and start observing suggestions
         // when the suggestions LiveData updates we swap out the adapter contents
         viewModel = new ViewModelProvider(this).get(LogDrinkViewModel.class);
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity());
         viewModel.getSuggestions().observe(getViewLifecycleOwner(), items -> {
             suggestionAdapter.clear();
             suggestionAdapter.addAll(items);
@@ -243,20 +268,66 @@ public class LogDrinkFragment extends Fragment {
         final String finalLocation = location;
         final String finalDesc     = description;
 
-        // step 1: upload the photo to Firebase Storage
-        // step 2: once uploaded, get the public download URL
-        // step 3: save the log entry to the database with that URL attached
+        if (!hasLocationPermission()) {
+            pendingLocationSubmit = () -> {
+                setBusy(true);
+                getCurrentLocation(locationResult ->
+                        uploadLogWithLocation(storageRef, finalItemName, finalUnits, finalDesc,
+                                finalLocation, locationResult));
+            };
+            locationPermissionLauncher.launch(new String[]{
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+            });
+            return;
+        }
+
+        // step 1: get the current coordinates for the map
+        // step 2: upload the photo to Firebase Storage
+        // step 3: once uploaded, get the public download URL
+        // step 4: save the log entry to the database with photo and coordinates attached
+        getCurrentLocation(locationResult ->
+                uploadLogWithLocation(storageRef, finalItemName, finalUnits, finalDesc,
+                        finalLocation, locationResult));
+    }
+
+    @SuppressLint("MissingPermission")
+    private void getCurrentLocation(OnLocationReady callback) {
+        if (!hasLocationPermission()) {
+            callback.onReady(null);
+            return;
+        }
+
+        fusedLocationClient.getCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, null)
+                .addOnSuccessListener(callback::onReady)
+                .addOnFailureListener(e -> callback.onReady(null));
+    }
+
+    private void uploadLogWithLocation(StorageReference storageRef, String itemName, float units,
+                                       String description, String locationLabel,
+                                       Location locationResult) {
+        Double latitude = locationResult != null ? locationResult.getLatitude() : null;
+        Double longitude = locationResult != null ? locationResult.getLongitude() : null;
+
         storageRef.putFile(selectedImageUri)
                 .addOnSuccessListener(snap ->
                         snap.getStorage().getDownloadUrl()
                                 .addOnSuccessListener(downloadUri -> {
-                                    viewModel.logEvent(currentCategory, finalItemName, finalUnits,
-                                            finalDesc, finalLocation, downloadUri.toString());
+                                    viewModel.logEvent(currentCategory, itemName, units,
+                                            description, locationLabel, latitude, longitude,
+                                            downloadUri.toString());
                                     Toast.makeText(requireContext(), "Logged!", Toast.LENGTH_SHORT).show();
                                     clearForm();
                                 })
                                 .addOnFailureListener(this::onUploadError))
                 .addOnFailureListener(this::onUploadError);
+    }
+
+    private boolean hasLocationPermission() {
+        return ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION)
+                == PackageManager.PERMISSION_GRANTED
+                || ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_COARSE_LOCATION)
+                == PackageManager.PERMISSION_GRANTED;
     }
 
     // called when anything in the upload or download URL step fails
@@ -284,5 +355,9 @@ public class LogDrinkFragment extends Fragment {
         ivPreview.setVisibility(View.GONE);
         llPhotoPlaceholder.setVisibility(View.VISIBLE);
         setBusy(false);
+    }
+
+    private interface OnLocationReady {
+        void onReady(Location location);
     }
 }

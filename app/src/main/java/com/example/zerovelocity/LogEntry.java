@@ -15,12 +15,14 @@ public class LogEntry {
     private final float units;
     private final String description;
     private final String location;
+    private final Double latitude;
+    private final Double longitude;
     private final String imageUrl;
     private final long timestampMillis;
 
     public LogEntry(String eventId, String userID, String username, Category category,
                     String itemName, float units, String description, String location,
-                    String imageUrl, long timestampMillis) {
+                    Double latitude, Double longitude, String imageUrl, long timestampMillis) {
         this.eventId = eventId;
         this.userID = userID;
         this.username = username;
@@ -29,6 +31,8 @@ public class LogEntry {
         this.units = units;
         this.description = description;
         this.location = location;
+        this.latitude = latitude;
+        this.longitude = longitude;
         this.imageUrl = imageUrl;
         this.timestampMillis = timestampMillis;
     }
@@ -41,6 +45,8 @@ public class LogEntry {
     public float getUnits()          { return units; }
     public String getDescription()   { return description; }
     public String getLocation()      { return location; }
+    public Double getLatitude()      { return latitude; }
+    public Double getLongitude()     { return longitude; }
     public String getImageUrl()      { return imageUrl; }
     public long getTimestampMillis() { return timestampMillis; }
 }
