@@ -49,6 +49,9 @@ public class MainActivity extends AppCompatActivity {
         BottomNavigationView bottomNav = findViewById(R.id.bottom_nav);
         refreshProfileIcon();
 
+        // top-left plus icon opens the add friends screen
+        topBar.setNavigationOnClickListener(v -> loadFragment(new FriendsFragment()));
+
         topBar.setOnMenuItemClickListener(item -> {
             if (item.getItemId() == R.id.action_profile) {
                 loadFragment(new ProfileFragment());
@@ -64,10 +67,10 @@ public class MainActivity extends AppCompatActivity {
             int id = item.getItemId();
             if (id == R.id.nav_feed) {
                 selected = new FeedFragment();
+            } else if (id == R.id.nav_map) {
+                selected = new FriendsFragment();
             } else if (id == R.id.nav_log) {
                 selected = new LogDrinkFragment();
-            } else if (id == R.id.nav_friends) {
-                selected = new FriendsFragment();
             } else if (id == R.id.nav_leaderboard) {
                 selected = new LeaderboardFragment();
             } else if (id == R.id.nav_calendar) {
@@ -148,7 +151,7 @@ public class MainActivity extends AppCompatActivity {
 
     // crops the profile photo into a circle and draws the orange theme border around it
     private Bitmap createCircularProfileIcon(Bitmap source) {
-        int size = 96;
+        int size = 144;
         int borderWidth = 6;
         Bitmap scaled = Bitmap.createScaledBitmap(source, size, size, true);
         Bitmap output = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
