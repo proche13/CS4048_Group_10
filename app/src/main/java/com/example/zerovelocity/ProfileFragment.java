@@ -128,12 +128,14 @@ public class ProfileFragment extends Fragment {
         tvFriendsPreview = view.findViewById(R.id.tv_profile_friends_preview);
         Button btnSave = view.findViewById(R.id.btn_save_profile);
         Button btnChangeProfilePicture = view.findViewById(R.id.btn_change_profile_picture);
+        Button btnChangePassword = view.findViewById(R.id.btn_change_password);
         Button btnLogout = view.findViewById(R.id.btn_logout);
         btnDeleteAccount = view.findViewById(R.id.btn_delete_account);
 
         tvEmail.setText(currentUser.getEmail());
         btnSave.setOnClickListener(v -> saveProfile());
         btnChangeProfilePicture.setOnClickListener(v -> showProfilePictureOptions());
+        btnChangePassword.setOnClickListener(v -> showChangePasswordDialog());
         btnLogout.setOnClickListener(v -> logout());
         btnDeleteAccount.setOnClickListener(v -> showDeleteAccountDialog());
 
@@ -348,6 +350,105 @@ public class ProfileFragment extends Fragment {
     private void logout() {
         FirebaseAuth.getInstance().signOut();
         returnToLogin();
+    }
+
+    //shows a password change dialog, reauthenticates, then updates the Firebase Auth password
+    private void showChangePasswordDialog() {
+        View dialogView = LayoutInflater.from(requireContext())
+                .inflate(R.layout.dialog_change_password, null, false);
+
+        TextInputLayout currentLayout = dialogView.findViewById(R.id.til_current_password);
+        TextInputLayout newLayout = dialogView.findViewById(R.id.til_new_password);
+        TextInputLayout confirmLayout = dialogView.findViewById(R.id.til_confirm_new_password);
+        TextInputEditText currentInput = dialogView.findViewById(R.id.et_current_password);
+        TextInputEditText newInput = dialogView.findViewById(R.id.et_new_password);
+        TextInputEditText confirmInput = dialogView.findViewById(R.id.et_confirm_new_password);
+
+        AlertDialog dialog = new AlertDialog.Builder(requireContext())
+                .setTitle("Change password")
+                .setView(dialogView)
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Update", null)
+                .create();
+
+        dialog.setOnShowListener(unused ->
+                dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+                    String currentPassword = getInputText(currentInput);
+                    String newPassword = getInputText(newInput);
+                    String confirmPassword = getInputText(confirmInput);
+
+                    if (!validatePasswordChange(currentPassword, newPassword, confirmPassword,
+                            currentLayout, newLayout, confirmLayout)) {
+                        return;
+                    }
+
+                    updatePassword(currentPassword, newPassword, dialog);
+                }));
+
+        dialog.show();
+    }
+
+    private String getInputText(TextInputEditText input) {
+        return input.getText() != null ? input.getText().toString().trim() : "";
+    }
+
+    private boolean validatePasswordChange(String currentPassword, String newPassword,
+                                           String confirmPassword,
+                                           TextInputLayout currentLayout,
+                                           TextInputLayout newLayout,
+                                           TextInputLayout confirmLayout) {
+        currentLayout.setError(null);
+        newLayout.setError(null);
+        confirmLayout.setError(null);
+
+        if (TextUtils.isEmpty(currentPassword)) {
+            currentLayout.setError("Current password is required");
+            return false;
+        }
+        if (!isValidPassword(newPassword)) {
+            newLayout.setError("Use 8+ characters with uppercase, lowercase and a number");
+            return false;
+        }
+        if (!newPassword.equals(confirmPassword)) {
+            confirmLayout.setError("Passwords do not match");
+            return false;
+        }
+        if (currentPassword.equals(newPassword)) {
+            newLayout.setError("New password must be different");
+            return false;
+        }
+        return true;
+    }
+
+    private boolean isValidPassword(String password) {
+        return password.length() >= 8
+                && password.matches(".*[A-Z].*")
+                && password.matches(".*[a-z].*")
+                && password.matches(".*\\d.*");
+    }
+
+    private void updatePassword(String currentPassword, String newPassword, AlertDialog dialog) {
+        if (currentUser == null || TextUtils.isEmpty(currentUser.getEmail())) {
+            Toast.makeText(getContext(), "Unable to confirm this account", Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        AuthCredential credential = EmailAuthProvider.getCredential(currentUser.getEmail(), currentPassword);
+        currentUser.reauthenticate(credential)
+                .addOnSuccessListener(unused ->
+                        currentUser.updatePassword(newPassword)
+                                .addOnSuccessListener(done -> {
+                                    dialog.dismiss();
+                                    Toast.makeText(getContext(), "Password updated", Toast.LENGTH_SHORT).show();
+                                })
+                                .addOnFailureListener(e ->
+                                        Toast.makeText(getContext(),
+                                                "Could not update password: " + e.getMessage(),
+                                                Toast.LENGTH_LONG).show()))
+                .addOnFailureListener(e ->
+                        Toast.makeText(getContext(),
+                                "Current password is incorrect: " + e.getMessage(),
+                                Toast.LENGTH_LONG).show());
     }
 
     //shows a password confirmation dialog before starting the destructive delete flow

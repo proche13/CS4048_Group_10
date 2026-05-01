@@ -2,6 +2,12 @@
 
 Most Polluted is our Android app for friends and competetive drinkers/smokers to compete with their friends as well as the rest of our users.
 
+## DEMO ACCOUNT
+i am supplying a demo account so that you can see a populated activity feed and such as your account you create will not have friends or logged
+consumptions as you have not done any of that
+Email: hsampers77@gmail.com
+Password: Password1!
+
 ## Features
 
 - Firebase email/password authentication with sign up and login flows.
