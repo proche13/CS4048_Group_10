@@ -47,6 +47,6 @@ Our app requests:
 
 ## ps
 fuwhads laptop broke during this project so 2 of my commits were done on henry sampers computer these commits were 
--improving the ui for the base functionality
--adding in first second and third badges for feed as well as corresponding colour schemes
+- Improving the ui for the base functionality
+- Adding in first second and third badges for feed as well as corresponding colour schemes
 
