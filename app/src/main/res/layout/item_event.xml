@@ -32,7 +32,6 @@
 
     </LinearLayout>
 
-    <!-- Invite friends button (right) -->
     <Button
         android:id="@+id/btn_invite"
         android:layout_width="wrap_content"
