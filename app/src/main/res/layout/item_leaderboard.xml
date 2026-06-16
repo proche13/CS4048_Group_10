@@ -1,29 +1,62 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:gravity="center_vertical"
     android:orientation="horizontal"
-    android:paddingTop="8dp"
-    android:paddingBottom="8dp"
-    android:gravity="center_vertical">
+    android:paddingTop="10dp"
+    android:paddingBottom="10dp">
 
+    <!-- Rank number -->
     <TextView
         android:id="@+id/tv_rank"
-        android:layout_width="40dp"
+        android:layout_width="32dp"
         android:layout_height="wrap_content"
-        android:textSize="16sp" />
+        android:gravity="center"
+        android:textColor="@color/auth_text_secondary"
+        android:textSize="14sp"
+        android:textStyle="bold" />
 
+    <!-- Circular avatar placeholder -->
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="44dp"
+        android:layout_height="44dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="12dp"
+        app:cardBackgroundColor="@color/auth_input_fill"
+        app:cardCornerRadius="22dp"
+        app:cardElevation="0dp"
+        app:strokeColor="@color/auth_card_stroke"
+        app:strokeWidth="1dp">
+
+        <TextView
+            android:id="@+id/tv_initial"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:textColor="@color/auth_text_primary"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- Username -->
     <TextView
         android:id="@+id/tv_name"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
-        android:textSize="16sp" />
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:textColor="@color/auth_text_primary"
+        android:textSize="15sp" />
 
+    <!-- Units -->
     <TextView
         android:id="@+id/tv_units"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textSize="16sp" />
+        android:textColor="@color/auth_text_secondary"
+        android:textSize="14sp" />
 
 </LinearLayout>

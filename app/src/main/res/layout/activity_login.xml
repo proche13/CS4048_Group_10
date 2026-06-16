@@ -27,7 +27,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:alpha="0.85"
-            android:text="Track drinks, vapes and cigarettes in one place"
+            android:text="Track drinks and cigarettes in one place"
             android:textAlignment="center"
             android:textColor="@color/auth_brand_ink"
             android:textSize="16sp" />

@@ -1,54 +1,369 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="16dp">
+    android:background="@drawable/auth_screen_background"
+    android:fillViewport="true">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Log Drink"
-        android:textSize="20sp"
-        android:textStyle="bold"
-        android:layout_marginBottom="8dp" />
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Category"
-        android:textSize="24sp"
-        android:textStyle="bold"
-        android:layout_marginBottom="24dp" />
-
-    <Spinner
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:id = "@+id/spinnerCategory"
-        android:layout_marginBottom="16dp">
-    </Spinner>
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        android:padding="24dp">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Units"
-        android:textSize="14sp"
-        android:layout_marginBottom="4dp">
-    </TextView>
+        <!-- Title -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="LOG ENTRY"
+            android:textColor="@color/auth_brand_ink"
+            android:textSize="34sp"
+            android:textStyle="bold" />
 
-    <EditText
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Enter units"
-        android:inputType="numberDecimal"
-        android:layout_marginBottom="24dp"
-        android:id = "@+id/editTextUnits">
-    </EditText>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:alpha="0.85"
+            android:text="Record what you consumed"
+            android:textAlignment="center"
+            android:textColor="@color/auth_brand_ink"
+            android:textSize="16sp" />
 
-    <Button
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Log"
-        android:id = "@+id/buttonLog">
-    </Button>
-</LinearLayout>
+        <!-- Details card -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            app:cardBackgroundColor="@color/auth_surface"
+            app:cardCornerRadius="28dp"
+            app:cardElevation="8dp"
+            app:strokeColor="@color/auth_card_stroke"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="24dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="What are you logging?"
+                    android:textColor="@color/auth_text_primary"
+                    android:textSize="20sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:layout_marginBottom="16dp"
+                    android:text="Select a category to get started"
+                    android:textColor="@color/auth_text_secondary"
+                    android:textSize="14sp" />
+
+                <!-- Category toggle -->
+                <com.google.android.material.button.MaterialButtonToggleGroup
+                    android:id="@+id/toggle_category"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="20dp"
+                    app:checkedButton="@id/btn_log_drink"
+                    app:selectionRequired="true"
+                    app:singleSelection="true">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_log_drink"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Drink"
+                        android:textAllCaps="false" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_log_cigarette"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Cigarette"
+                        android:textAllCaps="false" />
+
+                </com.google.android.material.button.MaterialButtonToggleGroup>
+
+                <!-- Controlled drink type shown only for drink logs -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/til_drink_type"
+                    style="@style/Widget.ZeroVelocity.AuthInputLayout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+
+                    <AutoCompleteTextView
+                        android:id="@+id/et_drink_type"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:focusable="false"
+                        android:hint="Drink type"
+                        android:inputType="none"
+                        android:singleLine="true"
+                        android:textSize="14sp"
+                        android:textColor="@color/auth_text_primary"
+                        android:textColorHint="@color/auth_text_secondary" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- Controlled drink/brand picker Contents change based on category/type -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/til_item_name"
+                    style="@style/Widget.ZeroVelocity.AuthInputLayout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:hint="Drink Name">
+
+                    <AutoCompleteTextView
+                        android:id="@+id/et_item_name"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:focusable="false"
+                        android:inputType="none"
+                        android:singleLine="true"
+                        android:textSize="14sp"
+                        android:textColor="@color/auth_text_primary"
+                        android:textColorHint="@color/auth_text_secondary" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- Units hint changes per category -->
+                <!-- Spirit size shown only when Spirit is selected -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/til_spirit_measure"
+                    style="@style/Widget.ZeroVelocity.AuthInputLayout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:hint="Spirit measure"
+                    android:visibility="gone">
+
+                    <AutoCompleteTextView
+                        android:id="@+id/et_spirit_measure"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:focusable="false"
+                        android:inputType="none"
+                        android:singleLine="true"
+                        android:textSize="14sp"
+                        android:textColor="@color/auth_text_primary"
+                        android:textColorHint="@color/auth_text_secondary" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- Mixer shown only when Spirit is selected -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/til_mixer"
+                    style="@style/Widget.ZeroVelocity.AuthInputLayout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:hint="Mixer"
+                    android:visibility="gone">
+
+                    <AutoCompleteTextView
+                        android:id="@+id/et_mixer"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:focusable="false"
+                        android:inputType="none"
+                        android:singleLine="true"
+                        android:textSize="14sp"
+                        android:textColor="@color/auth_text_primary"
+                        android:textColorHint="@color/auth_text_secondary" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/til_units"
+                    style="@style/Widget.ZeroVelocity.AuthInputLayout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:hint="Units (standard drinks)">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/et_units"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:enabled="false"
+                        android:inputType="none"
+                        android:singleLine="true"
+                        android:textSize="14sp"
+                        android:textColor="@color/auth_text_primary"
+                        android:textColorHint="@color/auth_text_secondary" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- Location (optional) -->
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.ZeroVelocity.AuthInputLayout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:hint="Spot name">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/et_location"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="textCapWords"
+                        android:singleLine="true"
+                        android:textSize="14sp"
+                        android:textColor="@color/auth_text_primary"
+                        android:textColorHint="@color/auth_text_secondary" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- Description (optional) -->
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.ZeroVelocity.AuthInputLayout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:hint="Description (optional)">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/et_description"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="top"
+                        android:inputType="textMultiLine|textCapSentences"
+                        android:lines="3"
+                        android:textSize="14sp"
+                        android:textColor="@color/auth_text_primary"
+                        android:textColorHint="@color/auth_text_secondary" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Photo card -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            app:cardBackgroundColor="@color/auth_surface"
+            app:cardCornerRadius="28dp"
+            app:cardElevation="8dp"
+            app:strokeColor="@color/auth_card_stroke"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="24dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:letterSpacing="0.08"
+                    android:text="PHOTO"
+                    android:textColor="@color/auth_text_secondary"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+
+                <!-- Tappable preview area -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/card_photo_area"
+                    android:layout_width="match_parent"
+                    android:layout_height="180dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    app:cardBackgroundColor="@color/auth_input_fill"
+                    app:cardCornerRadius="18dp"
+                    app:cardElevation="0dp"
+                    app:strokeColor="@color/auth_input_stroke"
+                    app:strokeWidth="1dp">
+
+                    <!-- Placeholder shown before a photo is picked -->
+                    <LinearLayout
+                        android:id="@+id/ll_photo_placeholder"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:gravity="center"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="8dp"
+                            android:text="📷"
+                            android:textSize="38sp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Add a photo (required)"
+                            android:textColor="@color/auth_text_secondary"
+                            android:textSize="14sp" />
+                    </LinearLayout>
+
+                    <!-- Image preview shown after picking -->
+                    <ImageView
+                        android:id="@+id/iv_preview"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:contentDescription="Selected photo"
+                        android:scaleType="centerCrop"
+                        android:visibility="gone" />
+
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Gallery / Camera buttons -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_gallery"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Gallery"
+                        android:textAllCaps="false"
+                        app:strokeColor="@color/auth_input_stroke" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_camera"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="10dp"
+                        android:text="Camera"
+                        android:textAllCaps="false"
+                        app:strokeColor="@color/auth_input_stroke" />
+
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Submit -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_log"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:layout_marginBottom="24dp"
+            android:minHeight="56dp"
+            android:text="Log Entry"
+            android:textAllCaps="false"
+            android:textSize="16sp"
+            app:backgroundTint="@color/auth_button"
+            app:cornerRadius="18dp" />
+
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

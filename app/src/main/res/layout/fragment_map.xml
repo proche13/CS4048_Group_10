@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!-- Full-screen map -->
+    <FrameLayout
+        android:id="@+id/map_fragment_container"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <!-- Top-left overlay card: Friends Map title + subtitle -->
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|start"
+        android:layout_margin="12dp"
+        app:cardBackgroundColor="@color/auth_surface"
+        app:cardCornerRadius="12dp"
+        app:cardElevation="6dp"
+        app:strokeColor="@color/auth_card_stroke"
+        app:strokeWidth="1dp">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="12dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Friends Map"
+                android:textColor="@color/auth_text_primary"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tv_map_subtitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="Showing recent drink spots"
+                android:textColor="@color/auth_text_secondary"
+                android:textSize="11sp" />
+
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- Events overlay button: bottom-right -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_map_events"
+        style="@style/Widget.Material3.Button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|start"
+        android:layout_margin="16dp"
+        android:paddingStart="20dp"
+        android:paddingEnd="20dp"
+        android:text="Events"
+        android:textAllCaps="false"
+        android:textSize="15sp"
+        app:backgroundTint="@color/auth_button"
+        app:cornerRadius="24dp"
+        app:elevation="6dp" />
+
+    <!-- Location pick mode overlay (hidden by default) -->
+    <FrameLayout
+        android:id="@+id/location_pick_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone">
+
+        <!-- Crosshair vertical line -->
+        <View
+            android:layout_width="2dp"
+            android:layout_height="44dp"
+            android:layout_gravity="center"
+            android:background="#CC333333" />
+
+        <!-- Crosshair horizontal line -->
+        <View
+            android:layout_width="44dp"
+            android:layout_height="2dp"
+            android:layout_gravity="center"
+            android:background="#CC333333" />
+
+        <!-- Bottom instruction + buttons -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom"
+            android:background="#DD1A1A1A"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="16dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Move map to set location, then confirm"
+                android:textColor="#FFFFFF"
+                android:textSize="13sp" />
+
+            <Button
+                android:id="@+id/btn_cancel_pick"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:text="Cancel"
+                android:textColor="#FFFFFF"
+                app:strokeColor="#FFFFFF" />
+
+            <Button
+                android:id="@+id/btn_confirm_pick"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:backgroundTint="@color/auth_button"
+                android:text="Confirm"
+                android:textColor="#FFFFFF" />
+
+        </LinearLayout>
+    </FrameLayout>
+
+</FrameLayout>

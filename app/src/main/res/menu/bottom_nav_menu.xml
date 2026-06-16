@@ -1,20 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Bottom navigation items for the main app sections -->
     <item
         android:id="@+id/nav_feed"
-        android:icon="@android:drawable/ic_menu_agenda"
-        android:title="Feed" />
+        android:icon="@drawable/ic_nav_home"
+        android:title="Activity" />
+    <item
+        android:id="@+id/nav_map"
+        android:icon="@drawable/ic_nav_map"
+        android:title="Map" />
     <item
         android:id="@+id/nav_log"
-        android:icon="@android:drawable/ic_menu_add"
-        android:title="Log Drink" />
-    <item
-        android:id="@+id/nav_friends"
-        android:icon="@android:drawable/ic_menu_myplaces"
-        android:title="Friends" />
+        android:icon="@drawable/ic_nav_add"
+        android:title="Log" />
     <item
         android:id="@+id/nav_leaderboard"
-        android:icon="@android:drawable/ic_menu_sort_by_size"
+        android:icon="@drawable/ic_nav_leaderboard"
         android:title="Leaderboard" />
+    <item
+        android:id="@+id/nav_calendar"
+        android:icon="@drawable/ic_nav_calendar"
+        android:title="Events" />
 </menu>

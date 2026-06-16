@@ -2,6 +2,11 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
+    <item
+        android:id="@+id/action_friends"
+        android:title="Add Friends"
+        app:showAsAction="always|withText" />
+
     <!-- Toolbar action that opens the usera profile screen -->
     <item
         android:id="@+id/action_profile"

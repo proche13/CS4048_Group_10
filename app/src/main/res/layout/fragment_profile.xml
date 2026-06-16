@@ -12,7 +12,7 @@
         android:orientation="vertical"
         android:padding="20dp">
 
-        <!-- Profile heading that matches the auth screen visual style. -->
+        <!-- profile heading that matches the auth screen visual style -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -46,7 +46,7 @@
                 android:orientation="vertical"
                 android:padding="24dp">
 
-                <!-- Editable account details for the signed-in user. -->
+                <!-- Editable account details for the signed in user -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -60,9 +60,42 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="6dp"
                     android:layout_marginBottom="18dp"
-                    android:text="Keep your display name up to date"
+                    android:text="Keep your display name and profile picture up to date"
                     android:textColor="@color/auth_text_secondary"
                     android:textSize="14sp" />
+
+                <!-- Current profile image, clipped to a circle via the card's corner radius -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="150dp"
+                    android:layout_height="150dp"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_marginBottom="10dp"
+                    app:cardCornerRadius="75dp"
+                    app:cardElevation="4dp"
+                    app:strokeColor="@color/auth_card_stroke"
+                    app:strokeWidth="2dp">
+
+                    <ImageView
+                        android:id="@+id/iv_profile_picture"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:contentDescription="Profile picture"
+                        android:scaleType="centerCrop"
+                        android:src="@android:drawable/ic_menu_myplaces" />
+
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Lets the user replace their profile picture from camera or gallery -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_change_profile_picture"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_marginBottom="18dp"
+                    android:text="Change profile picture"
+                    android:textAllCaps="false"
+                    app:backgroundTint="@color/auth_button"
+                    app:cornerRadius="18dp" />
 
                 <com.google.android.material.textfield.TextInputLayout
                     style="@style/Widget.ZeroVelocity.AuthInputLayout"
@@ -108,6 +141,45 @@
                     android:textSize="16sp"
                     app:backgroundTint="@color/auth_button"
                     app:cornerRadius="18dp" />
+
+                <!-- opens a dialog where the user can change their password -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_change_password"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:minHeight="52dp"
+                    android:text="Change password"
+                    android:textAllCaps="false"
+                    android:textSize="16sp"
+                    app:backgroundTint="@color/auth_button"
+                    app:cornerRadius="18dp" />
+
+                <!-- Signs out and returns to the login screen -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_logout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:minHeight="52dp"
+                    android:text="Log out"
+                    android:textAllCaps="false"
+                    android:textSize="16sp"
+                    app:backgroundTint="@color/auth_text_secondary"
+                    app:cornerRadius="18dp" />
+
+                <!-- Requires password confirmation before deleting auth and database data -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_delete_account"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:minHeight="52dp"
+                    android:text="Delete account"
+                    android:textAllCaps="false"
+                    android:textSize="16sp"
+                    app:backgroundTint="@android:color/holo_red_dark"
+                    app:cornerRadius="18dp" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -134,7 +206,7 @@
                     android:orientation="vertical"
                     android:padding="18dp">
 
-                    <!-- Consumption stats summary card. -->
+                    <!-- Consumption stats summary card -->
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -148,7 +220,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
-                        android:text="Drinks: 0  |  Vapes: 0  |  Cigarettes: 0"
+                        android:text="Drinks: 0  |  Cigarettes: 0"
                         android:textColor="@color/auth_text_primary"
                         android:textSize="15sp" />
                 </LinearLayout>
@@ -171,7 +243,7 @@
                     android:orientation="vertical"
                     android:padding="18dp">
 
-                    <!-- Friend count card for the current user. -->
+                    <!-- Friend count card for the current user -->
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -210,7 +282,7 @@
                 android:orientation="vertical"
                 android:padding="20dp">
 
-                <!-- Short preview of names from the user's current friends list. -->
+                <!-- Short preview of names from the user's current friends list -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
